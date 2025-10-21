@@ -111,6 +111,15 @@
     .btn{background:#1e1e1e;border:1px solid #333;color:#eee;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700}
     .btn.primary{background:#0a84ff;border-color:#0a84ff}
   </style>
+
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
 </head>
 <body>
 <audio id="tapSound" src="click.wav" preload="auto"></audio>
@@ -552,5 +561,30 @@ document.addEventListener('click', e => {
       qs('#fsBtn').textContent = document.fullscreenElement ? '🗗 Exit Fullscreen' : '⛶ Fullscreen';
     })();
   </script>
+
+<script>
+// Wake Lock (keeps screen on)
+let wakeLock;
+async function requestWakeLock() {
+  try { wakeLock = await navigator.wakeLock.request('screen'); }
+  catch(e) { /* ignore */ }
+}
+// Try to re-acquire on visibility change
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+});
+// Orientation lock (best-effort)
+if (screen.orientation && screen.orientation.lock) {
+  screen.orientation.lock('landscape').catch(()=>{});
+}
+// Request wake lock on first user interaction
+window.addEventListener('pointerdown', requestWakeLock, { once: true });
+
+// Basic service worker register (for offline)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+</script>
+
 </body>
 </html>
