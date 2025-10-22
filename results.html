@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snooker Results</title>
+<meta name="theme-color" content="#000000">
+<style>
+  :root{
+    --bg:#000; --fg:#fff; --muted:#9aa0a6; --panel:#111; --panel2:#0b0b0b;
+    --border:#222; --accent:#0a84ff; --danger:#ff4d4f; --ok:#37d67a; --chip:#151515;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%}
+  a{color:var(--accent);text-decoration:none}
+  .app{min-height:100%;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,var(--panel),var(--panel2))}
+  .title{font-weight:900;font-size:20px}
+  .actions{display:flex;flex-wrap:wrap;gap:8px}
+  .btn{background:#1e1e1e;border:1px solid #333;color:#eee;padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.danger{background:#2a1010;border-color:#4a1a1a}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:12px;color:#ddd}
+  .wrap{padding:12px 14px;max-width:1200px;margin:0 auto;width:100%}
+  .tabs{display:flex;gap:6px;margin:10px 0 14px}
+  .tab{background:#121212;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer;color:#ddd}
+  .tab.active{background:#1b1b1b;color:#fff;border-color:#444}
+  .card{background:#101010;border:1px solid var(--border);border-radius:14px;padding:12px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .grow{flex:1}
+  input[type="text"], select{background:#0f0f0f;border:1px solid #2a2a2a;color:#fff;border-radius:10px;padding:10px 12px;min-width:180px}
+  table{width:100%;border-collapse:separate;border-spacing:0;margin-top:10px;font-size:14px}
+  th,td{padding:10px 8px;border-bottom:1px solid #171717;vertical-align:middle}
+  th{color:#bbb;text-align:left;cursor:pointer;user-select:none}
+  tr:hover{background:#0c0c0c}
+  .right{text-align:right}
+  .center{text-align:center}
+  .small{font-size:12px;color:#aaa}
+  .badge{display:inline-block;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:6px}
+  .winner{color:#fff;background:#14331f;border-color:#235a38}
+  .dangerText{color:var(--danger)}
+  .empty{opacity:.8;text-align:center;padding:40px 10px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}}
+  .stat{background:#0f0f0f;border:1px solid #1f1f1f;border-radius:12px;padding:12px}
+  .stat h4{margin:0 0 6px;color:#bbb;font-size:12px;font-weight:700}
+  .stat .num{font-size:26px;font-weight:900}
+  .muted{color:#aaa}
+  .footer{margin-top:auto;padding:12px 14px;border-top:1px solid #111;color:#888;text-align:center;font-size:12px}
+  /* modal */
+  .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999}
+  .modal{background:#141414;border:1px solid #2a2a2a;border-radius:14px;padding:18px;min-width:280px;max-width:92%}
+  .modal h4{margin:0 0 10px}
+  .modal p{margin:0 0 12px;color:#ccc;white-space:pre-wrap}
+  .modal .row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+  .note{opacity:.85}
+  .pill{display:inline-block;background:#151515;border:1px solid #2a2a2a;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:4px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="row">
+      <button class="btn" id="backBtn">⟵ Scoreboard</button>
+      <div class="title">Results</div>
+      <span class="chip" id="logCount">0 frames</span>
+    </div>
+    <div class="actions">
+      <button class="btn" id="exportCsvBtn">Export CSV</button>
+      <button class="btn" id="copyBtn">Copy Summary</button>
+      <button class="btn" id="shareBtn">Share</button>
+      <button class="btn danger" id="clearBtn">Clear Logs…</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="tabs">
+      <button class="tab active" data-tab="frames">Frames</button>
+      <button class="tab" data-tab="players">Players</button>
+      <button class="tab" data-tab="stats">Stats</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="card row" id="filters">
+      <div class="chips">
+        <button class="btn" data-range="all">All</button>
+        <button class="btn" data-range="today">Today</button>
+        <button class="btn" data-range="7d">Last 7 days</button>
+        <button class="btn" data-range="30d">Last 30 days</button>
+      </div>
+      <input class="grow" type="text" id="search" placeholder="Search name / match / winner…">
+      <select id="sort">
+        <option value="-endedAt">Newest first</option>
+        <option value="endedAt">Oldest first</option>
+        <option value="-margin">Biggest margin</option>
+        <option value="-p1.score">Highest P1 score</option>
+        <option value="-p2.score">Highest P2 score</option>
+        <option value="-p1.highBreak">Highest P1 break</option>
+        <option value="-p2.highBreak">Highest P2 break</option>
+        <option value="-durationSec">Longest frame</option>
+      </select>
+    </div>
+
+    <!-- Frames tab -->
+    <section id="tab-frames">
+      <div class="card">
+        <table id="framesTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Match</th>
+              <th>Player 1</th>
+              <th>Player 2</th>
+              <th class="center">Score</th>
+              <th>Winner</th>
+              <th class="right">Margin</th>
+              <th class="right">Dur.</th>
+            </tr>
+          </thead>
+          <tbody id="framesBody">
+            <tr><td colspan="8" class="empty">No frames logged yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Players tab -->
+    <section id="tab-players" hidden>
+      <div class="grid" id="playersGrid">
+        <!-- player cards injected -->
+      </div>
+    </section>
+
+    <!-- Stats tab -->
+    <section id="tab-stats" hidden>
+      <div class="grid">
+        <div class="stat">
+          <h4>Total frames</h4>
+          <div class="num" id="stTotal">0</div>
+        </div>
+        <div class="stat">
+          <h4>Average frame duration</h4>
+          <div class="num" id="stAvgDur">0m</div>
+        </div>
+        <div class="stat">
+          <h4>Session high break</h4>
+          <div class="num" id="stHiBreak">—</div>
+          <div class="muted small" id="stHiBreakBy"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3 style="margin:0 0 8px">Top Breaks</h3>
+        <table id="topBreaks">
+          <thead>
+            <tr><th>#</th><th>Player</th><th class="right">Break</th><th>Date</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <h3 style="margin:0 0 8px">Margins Distribution</h3>
+        <div id="marginsText" class="small muted">—</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Detail modal -->
+  <div class="modalBackdrop" id="detailModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+      <h4 id="dTitle">Frame Details</h4>
+      <p id="dBody">…</p>
+      <div class="row">
+        <button class="btn" id="closeDetail">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clear modal -->
+  <div class="modalBackdrop" id="clearModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cTitle">
+      <h4 id="cTitle">Clear all logs?</h4>
+      <p class="note">Type <b>CLEAR</b> to confirm. This cannot be undone.</p>
+      <input type="text" id="clearInput" placeholder="Type CLEAR">
+      <div class="row">
+        <button class="btn" id="cancelClear">Cancel</button>
+        <button class="btn danger" id="confirmClear" disabled>Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Results are saved locally on this device.</div>
+</div>
+
+<script>
+(function(){
+  const qs = s=>document.querySelector(s);
+  const qsa = s=>Array.from(document.querySelectorAll(s));
+  const fmtDate = iso => {
+    const d = new Date(iso);
+    return d.toLocaleString([], {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+  };
+  const pad = n => String(n).padStart(2,'0');
+  const durFmt = s => {
+    const m = Math.floor(s/60), sec = s%60;
+    return `${m}m ${pad(sec)}s`;
+  };
+
+  function getLogs(){ try{return JSON.parse(localStorage.getItem('snookerLogs')||'[]');}catch(e){return [];} }
+  function setLogs(v){ localStorage.setItem('snookerLogs', JSON.stringify(v)); }
+
+  // --- State & filters
+  let logs = getLogs();
+  let range = 'all';
+  let query = '';
+  let sortKey = '-endedAt';
+
+  // --- Navigation
+  qs('#backBtn').addEventListener('click', ()=>{ location.href='index.html'; });
+
+  // --- Tabs
+  qsa('.tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      qsa('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const id = t.dataset.tab;
+      qsa('section[id^="tab-"]').forEach(s=>s.hidden=true);
+      qs('#tab-'+id).hidden=false;
+      renderAll();
+    });
+  });
+
+  // --- Filters
+  qsa('#filters .btn').forEach(b=>{
+    if(!b.dataset.range) return;
+    b.addEventListener('click', ()=>{ range = b.dataset.range; renderAll(); });
+  });
+  qs('#search').addEventListener('input', e=>{ query = e.target.value.toLowerCase(); renderAll(); });
+  qs('#sort').addEventListener('change', e=>{ sortKey = e.target.value; renderAll(); });
+
+  // --- Actions
+  qs('#exportCsvBtn').addEventListener('click', exportCSV);
+  qs('#copyBtn').addEventListener('click', copySummary);
+  qs('#shareBtn').addEventListener('click', shareSummary);
+  qs('#clearBtn').addEventListener('click', openClear);
+  qs('#cancelClear').addEventListener('click', closeClear);
+  qs('#clearInput').addEventListener('input', e=>{
+    qs('#confirmClear').disabled = (e.target.value.trim().toUpperCase()!=='CLEAR');
+  });
+  qs('#confirmClear').addEventListener('click', ()=>{
+    setLogs([]);
+    logs = [];
+    closeClear();
+    renderAll();
+  });
+
+  // --- Modal helpers
+  function openDetail(text){
+    qs('#dBody').textContent = text;
+    qs('#detailModal').style.display='flex';
+  }
+  qs('#closeDetail').addEventListener('click', ()=>qs('#detailModal').style.display='none');
+
+  function openClear(){ qs('#clearModal').style.display='flex'; qs('#clearInput').value=''; qs('#confirmClear').disabled=true; }
+  function closeClear(){ qs('#clearModal').style.display='none'; }
+
+  // --- Filtering & sorting
+  function withinRange(rec){
+    if(range==='all') return true;
+    const end = new Date(rec.endedAt || rec.id).getTime();
+    const now = Date.now();
+    if(range==='today'){
+      const d = new Date();
+      d.setHours(0,0,0,0);
+      return end >= d.getTime();
+    }
+    const days = range==='7d'?7:30;
+    return end >= (now - days*86400000);
+  }
+  function matchesQuery(rec){
+    if(!query) return true;
+    const hay = [
+      rec.match||'',
+      rec.p1?.name||'',
+      rec.p2?.name||'',
+      rec.winner||'',
+      (rec.notes||'')
+    ].join(' ').toLowerCase();
+    return hay.includes(query);
+  }
+  function sortRecs(arr){
+    const key = sortKey.replace(/^-/,''), desc = sortKey.startsWith('-');
+    return arr.slice().sort((a,b)=>{
+      let va = deepGet(a,key), vb = deepGet(b,key);
+      if(typeof va === 'string' && key.includes('endedAt')) { va = new Date(va).getTime(); }
+      if(typeof vb === 'string' && key.includes('endedAt')) { vb = new Date(vb).getTime(); }
+      if(va==null) va = -Infinity; if(vb==null) vb = -Infinity;
+      return desc ? (vb>va?1:-1) : (va>vb?1:-1);
+    });
+  }
+  function deepGet(o,path){
+    return path.split('.').reduce((v,k)=>v&&v[k], o);
+  }
+
+  // --- Rendering
+  function renderFrames(){
+    const body = qs('#framesBody');
+    body.innerHTML = '';
+    let recs = logs.filter(withinRange).filter(matchesQuery);
+    recs = sortRecs(recs);
+    if(!recs.length){
+      body.innerHTML = `<tr><td colspan="8" class="empty">No frames found for this filter.</td></tr>`;
+      return;
+    }
+    const rows = [];
+    recs.forEach((r,idx)=>{
+      const d = fmtDate(r.endedAt || r.id);
+      const match = r.match || 'Session';
+      const p1 = r.p1?.name || 'Player 1', p2 = r.p2?.name || 'Player 2';
+      const s1 = r.p1?.score ?? 0, s2 = r.p2?.score ?? 0;
+      const hb1 = r.p1?.highBreak ?? 0, hb2 = r.p2?.highBreak ?? 0;
+      const fouls1 = r.p1?.foulsFor ?? 0, fouls2 = r.p2?.foulsFor ?? 0;
+      const scoreStr = `${s1} – ${s2}`;
+      const winner = r.winner || (s1===s2?'Tie':(s1>s2?p1:p2));
+      const margin = r.margin ?? Math.abs(s1-s2);
+      const dur = durFmt(r.durationSec ?? 0);
+      const snookers = r.snookersRequired ? `<span class="badge dangerText">Snookers</span>` : '';
+      const wb = r.sessionHighBreak ? `<span class="badge">🏆 HiB ${r.sessionHighBreak}</span>` : '';
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${d}</td>
+        <td>${match}</td>
+        <td>${p1} <span class="small">HiB ${hb1} · F ${fouls1}</span></td>
+        <td>${p2} <span class="small">HiB ${hb2} · F ${fouls2}</span></td>
+        <td class="center"><b>${scoreStr}</b></td>
+        <td>${winner}${snookers}</td>
+        <td class="right">${margin}</td>
+        <td class="right small">${dur}</td>
+      `;
+      row.addEventListener('click', ()=>{
+        const detail = [
+          `${d} — ${match}`,
+          `${p1} ${s1} (HiB ${hb1})  vs  ${p2} ${s2} (HiB ${hb2})`,
+          `Winner: ${winner}${winner!=='Tie' ? `  |  Margin: ${margin}`:''}`,
+          `Fouls awarded → ${p1}: ${fouls1}, ${p2}: ${fouls2}`,
+          `Reds left: ${r.redsLeft} | Colours: ${(r.colorsRemaining||[]).join(', ')||'—'}`,
+          `Duration: ${dur}`,
+          r.notes ? `Notes: ${r.notes}` : ''
+        ].filter(Boolean).join('\n');
+        openDetail(detail);
+      });
+      rows.push(row);
+    });
+    rows.forEach(r=>body.appendChild(r));
+  }
+
+  function renderPlayers(){
+    const grid = qs('#playersGrid');
+    grid.innerHTML = '';
+    if(!logs.length){
+      grid.innerHTML = `<div class="empty card">No frames yet. Play a frame and log it first.</div>`;
+      return;
+    }
+    const stats = aggregatePlayers(logs);
+    const cards = Object.values(stats).sort((a,b)=>b.wins-a.wins).map(p=>{
+      const wlr = p.played? Math.round((p.wins/p.played)*100):0;
+      const avgScore = p.played? Math.round(p.points/p.played):0;
+      const avgMargin = p.played? (p.marginSum/p.played).toFixed(1):'0.0';
+      const card = document.createElement('div');
+      card.className='card';
+      card.innerHTML = `
+        <div class="row" style="justify-content:space-between">
+          <div style="font-weight:800">${p.name}</div>
+          <div class="chip">Played ${p.played}</div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <div class="stat grow"><h4>Wins</h4><div class="num">${p.wins} <span class="small">(${wlr}%)</span></div></div>
+          <div class="stat grow"><h4>High break</h4><div class="num">${p.highBreak}</div></div>
+          <div class="stat grow"><h4>Avg score</h4><div class="num">${avgScore}</div></div>
+          <div class="stat grow"><h4>Avg margin</h4><div class="num">${avgMargin}</div></div>
+        </div>
+        <div class="small muted" style="margin-top:6px">Fouls awarded: ${p.foulsFor} · Best win: ${p.bestWinMargin} · Worst loss: ${p.worstLossMargin}</div>
+      `;
+      return card;
+    });
+    cards.forEach(c=>grid.appendChild(c));
+  }
+
+  function renderStats(){
+    qs('#stTotal').textContent = logs.length;
+    if(!logs.length){
+      qs('#stAvgDur').textContent = '0m';
+      qs('#stHiBreak').textContent = '—';
+      qs('#stHiBreakBy').textContent = '';
+      qs('#topBreaks tbody').innerHTML='';
+      qs('#marginsText').textContent='—';
+      return;
+    }
+    const avgDur = Math.round(logs.reduce((a,b)=>a+(b.durationSec||0),0)/logs.length);
+    qs('#stAvgDur').textContent = durFmt(avgDur);
+
+    // top breaks across both players
+    const breaks = [];
+    logs.forEach(r=>{
+      if(r.p1?.highBreak!=null) breaks.push({name:r.p1.name, br:r.p1.highBreak, when:r.endedAt||r.id});
+      if(r.p2?.highBreak!=null) breaks.push({name:r.p2.name, br:r.p2.highBreak, when:r.endedAt||r.id});
+    });
+    const sorted = breaks.sort((a,b)=>b.br-a.br).slice(0,10);
+    const hi = sorted[0];
+    if(hi){ qs('#stHiBreak').textContent = hi.br; qs('#stHiBreakBy').textContent = `by ${hi.name} on ${fmtDate(hi.when)}`; }
+    const tb = qs('#topBreaks tbody'); tb.innerHTML='';
+    sorted.forEach((x,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i+1}</td><td>${x.name}</td><td class="right"><b>${x.br}</b></td><td>${fmtDate(x.when)}</td>`;
+      tb.appendChild(tr);
+    });
+
+    // margins distribution (textual)
+    const buckets = { '0-10':0, '11-20':0, '21-30':0, '31+':0 };
+    logs.forEach(r=>{
+      const m = Math.abs((r.p1?.score||0)-(r.p2?.score||0));
+      if(m<=10) buckets['0-10']++; else if(m<=20) buckets['11-20']++; else if(m<=30) buckets['21-30']++; else buckets['31+']++;
+    });
+    qs('#marginsText').textContent = `0–10: ${buckets['0-10']}, 11–20: ${buckets['11-20']}, 21–30: ${buckets['21-30']}, 31+: ${buckets['31+']}`;
+  }
+
+  function aggregatePlayers(all){
+    const map = {};
+    const ensure = name => (map[name] ||= {name, played:0, wins:0, points:0, marginSum:0, highBreak:0, foulsFor:0, bestWinMargin:0, worstLossMargin:0});
+    all.forEach(r=>{
+      const p1 = ensure(r.p1?.name||'Player 1');
+      const p2 = ensure(r.p2?.name||'Player 2');
+      const s1 = r.p1?.score||0, s2 = r.p2?.score||0;
+      const m = Math.abs(s1-s2);
+      p1.played++; p2.played++;
+      p1.points += s1; p2.points += s2;
+      p1.marginSum += (s1-s2); p2.marginSum += (s2-s1);
+      if((r.winner||'') === p1.name) p1.wins++;
+      if((r.winner||'') === p2.name) p2.wins++;
+      p1.highBreak = Math.max(p1.highBreak, r.p1?.highBreak||0);
+      p2.highBreak = Math.max(p2.highBreak, r.p2?.highBreak||0);
+      p1.foulsFor += r.p1?.foulsFor||0;
+      p2.foulsFor += r.p2?.foulsFor||0;
+      if(s1>s2) p1.bestWinMargin = Math.max(p1.bestWinMargin,m); else if(s2>s1) p1.worstLossMargin = Math.max(p1.worstLossMargin,m);
+      if(s2>s1) p2.bestWinMargin = Math.max(p2.bestWinMargin,m); else if(s1>s2) p2.worstLossMargin = Math.max(p2.worstLossMargin,m);
+    });
+    return map;
+  }
+
+  // --- Export / Copy / Share
+  function exportCSV(){
+    const arr = logs.slice();
+    if(!arr.length){ toast('No logs to export'); return; }
+    const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+    const rows = [
+      ['date','match','p1','p1Score','p1HiB','p1Fouls','p2','p2Score','p2HiB','p2Fouls','winner','margin','redsLeft','colorsRemaining','durationSec','notes']
+    ];
+    arr.forEach(r=>{
+      rows.push([
+        r.endedAt||r.id, r.match||'Session',
+        r.p1?.name||'', r.p1?.score||0, r.p1?.highBreak||0, r.p1?.foulsFor||0,
+        r.p2?.name||'', r.p2?.score||0, r.p2?.highBreak||0, r.p2?.foulsFor||0,
+        r.winner||'', r.margin||Math.abs((r.p1?.score||0)-(r.p2?.score||0)),
+        r.redsLeft??'', (r.colorsRemaining||[]).join(' '), r.durationSec||0, r.notes||''
+      ].map(esc).join(','));
+    });
+    const csv = rows.map(r=>Array.isArray(r)?r:r.split(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `snooker-results-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function buildSummaryText(){
+    if(!logs.length) return 'No frames logged.';
+    const lines = logs.slice().sort((a,b)=>new Date(b.endedAt||b.id)-new Date(a.endedAt||a.id)).map(r=>{
+      const d = fmtDate(r.endedAt||r.id);
+      const p1 = r.p1?.name||'P1', p2=r.p2?.name||'P2';
+      const s1=r.p1?.score||0, s2=r.p2?.score||0;
+      const hb1=r.p1?.highBreak||0, hb2=r.p2?.highBreak||0;
+      return `${d} — ${p1} ${s1} (HiB ${hb1}) def. ${p2} ${s2} (HiB ${hb2}) by ${Math.abs(s1-s2)}`;
+    });
+    return lines.join('\n');
+  }
+  async function copySummary(){
+    const txt = buildSummaryText();
+    try{
+      await navigator.clipboard.writeText(txt);
+      toast('Copied!');
+    }catch(e){
+      toast('Copy failed');
+    }
+  }
+  async function shareSummary(){
+    const txt = buildSummaryText();
+    if(navigator.share){
+      try{ await navigator.share({text:txt}); }catch(e){}
+    } else {
+      await copySummary();
+    }
+  }
+
+  // --- Tiny toast (visual feedback)
+  let toastEl;
+  function toast(msg){
+    if(!toastEl){
+      toastEl = document.createElement('div');
+      toastEl.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f1f1f;color:#fff;border:1px solid #333;padding:10px 14px;border-radius:10px;z-index:99999;opacity:0;transition:.25s';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.style.opacity = '1';
+    setTimeout(()=>toastEl.style.opacity='0', 1400);
+  }
+
+  // --- Initial render
+  function renderAll(){
+    logs = getLogs();
+    qs('#logCount').textContent = `${logs.length} frame${logs.length===1?'':'s'}`;
+    renderFrames();
+    renderPlayers();
+    renderStats();
+  }
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
