@@ -34,7 +34,7 @@
     .statCard h3{margin:0 0 6px;font-size:14px;color:var(--muted)}
     .statCard .big{font-size:clamp(22px,4.5vw,44px);font-weight:800}
 
-    /* >>> Compact variant just for Points Left <<< */
+    /* Compact Points Left */
     .statCard.compact{padding:10px 12px}
     .statCard.compact h3{font-size:13px;margin-bottom:4px}
     .statCard.compact .big{font-size:clamp(20px,3.6vw,36px)}
@@ -99,7 +99,7 @@
     @media(max-width:920px){:root{--btnSize:84px}}
     @media(max-width:760px){:root{--btnSize:72px}}
 
-    /* --- Modal: fullscreen-safe confirm (no native alert/confirm) --- */
+    /* Modal */
     .modalBackdrop{
       position:fixed;inset:0;background:rgba(0,0,0,.6);
       display:none;align-items:center;justify-content:center;z-index:9999;
@@ -142,7 +142,6 @@
     </div>
 
     <div class="middle">
-      <!-- Compact points-left card -->
       <div class="statCard compact">
         <h3>Points Left</h3>
         <div class="big" id="pointsLeft">147</div>
@@ -223,35 +222,36 @@
       const state = {
         selected: 1,
         scores: {1:0, 2:0},
-        currentBreak: {1:0, 2:0},      // kept internally for high break; not shown
+        currentBreak: {1:0, 2:0},
         highBreak: {1:0, 2:0},
         pending: 0,
         pendingBalls: [],
-        pendingFor: 1,
-        pendingFoul: false,
+        pendingFor: 1,        // who will be credited for pots/fouls (== selected at staging time)
+        pendingFoul: false,   // when true: pending is a single foul value
         redsLeft: 15,
         colorsRemaining: [...ALL_COLORS],
-        history: [],                    // {player, amount, redsDelta, colorsRemoved: [], foul?:true}
+        history: [],          // entries include prevBreak/prevHigh and endedBreak flag
         redoStack: []
       };
-const playTap = () => {
-  const el = document.getElementById('tapSound');
-  if (!el) return;
-  el.currentTime = 0;
-  el.play().catch(()=>{});
-};
 
-document.addEventListener('click', e => {
-  if (e.target.closest('button')) playTap();
-});
+      // Tap sound
+      const playTap = () => {
+        const el = document.getElementById('tapSound');
+        if (!el) return;
+        el.currentTime = 0;
+        el.play().catch(()=>{});
+      };
+      document.addEventListener('click', e => {
+        if (e.target.closest('button')) playTap();
+      });
 
-      // Minimal restore
+      // Restore (minimal)
       const saved = JSON.parse(localStorage.getItem('snookerBoardV1')||'null');
       if(saved){
         Object.assign(state, saved);
         if(!Array.isArray(state.colorsRemaining)) state.colorsRemaining = [...ALL_COLORS];
         if(typeof state.pendingFoul!=='boolean') state.pendingFoul = false;
-        renderScores(); updateDiff(); updatePointsLeft();
+        renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility();
       }
 
       function save(){
@@ -283,16 +283,19 @@ document.addEventListener('click', e => {
 
       // Pending
       function addPending(points){
-        if(state.pendingFoul) return;
+        if(state.pendingFoul) return;                 // fouls are single-shot
         if(state.pending===0){ state.pendingFor = state.selected; }
         state.pending += points;
         state.pendingBalls.push(points);
         showPending();
       }
       function addFoul(points){
-        if(state.pending===0){ state.pendingFor = state.selected; }
+        // REVERTED: award to SELECTED player on submit
+        // Stage a foul as the only pending item and mark the intended recipient = selected at this moment
+        state.pendingFor = state.selected;
         state.pendingFoul = true;
-        state.pending += points;
+        state.pending = Number(points);
+        state.pendingBalls = [];
         showPending();
       }
       function showPending(){
@@ -311,7 +314,7 @@ document.addEventListener('click', e => {
         qs('#foulBadge').style.display = 'none';
       }
 
-      // Simulation for normal (non-foul) submits
+      // Simulate normal (non-foul) sequence to determine reds/colours removal
       function simulatePendingSequence(){
         const redsBefore = state.redsLeft;
         let redsSim = redsBefore;
@@ -325,7 +328,7 @@ document.addEventListener('click', e => {
             afterRed = true;
           } else if(ALL_COLORS.includes(v)){
             if(afterRed){
-              afterRed = false; // respotted
+              afterRed = false; // respotted during red+colour phase
             } else if (redsSim===0){
               const idx = colorsSim.indexOf(v);
               if(idx!==-1){ colorsSim.splice(idx,1); colorsRemoved.push(v); }
@@ -334,6 +337,7 @@ document.addEventListener('click', e => {
         });
 
         if(redsBefore>0 && redsSim===0){
+          // Transition to clearance during this submit: reset colours then reapply clearance removes
           colorsSim = [...ALL_COLORS];
           let tempReds = redsBefore, postRed = false;
           for(const v of state.pendingBalls){
@@ -349,38 +353,57 @@ document.addEventListener('click', e => {
           }
         }
 
-        const redsDelta = redsSim - redsBefore;
+        const redsDelta = redsSim - redsBefore; // typically negative or 0
         return { redsDelta, colorsAfter: colorsSim, colorsRemoved };
       }
 
-      // Submit
+      // Submit (Submit ALWAYS ends break of SELECTED player)
       function submitPending(){
         if(state.pending<=0) return;
-        const p = state.pendingFor;
+        const sel = state.selected;
+        const prevBreak = state.currentBreak[sel];
+        const prevHigh  = state.highBreak[sel];
 
         if(state.pendingFoul){
-          const action = { player:p, amount:state.pending, redsDelta:0, colorsRemoved:[], foul:true };
-          state.scores[p] += state.pending;
-          state.history.push(action);
-          state.redoStack = [];
+          // Award foul points to the SELECTED player (your preferred behavior)
+          const recipient = state.pendingFor; // == selected when staging foul
+          state.scores[recipient] += state.pending;
+
+          state.history.push({
+            type:'foul',
+            player: recipient,
+            points: state.pending,
+            prevBreak, prevHigh,
+            endedBreak: true
+          });
+
+          finalizeBreak(sel); // submit ends break (of selected player)
           clearPending();
           renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility(); save();
           return;
         }
 
+        // Normal pots → credit selected player
+        const p = state.pendingFor; // == selected when you started staging pots
         const { redsDelta, colorsAfter, colorsRemoved } = simulatePendingSequence();
 
         state.scores[p] += state.pending;
-        state.currentBreak[p] += state.pending;
-        if(state.currentBreak[p] > state.highBreak[p]) state.highBreak[p] = state.currentBreak[p];
+        state.currentBreak[p] += state.pending; // will be recorded by finalizeBreak
 
+        // Apply table state
         state.redsLeft = clamp(state.redsLeft + redsDelta, 0, 15);
         state.colorsRemaining = colorsAfter;
 
-        const action = { player:p, amount:state.pending, redsDelta, colorsRemoved, foul:false };
-        state.history.push(action);
-        state.redoStack = [];
+        state.history.push({
+          type:'pots',
+          player: p,
+          amount: state.pending,
+          redsDelta, colorsRemoved,
+          prevBreak, prevHigh,
+          endedBreak: true
+        });
 
+        finalizeBreak(sel); // submit ends break (of selected player)
         clearPending();
         renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility(); save();
       }
@@ -393,11 +416,22 @@ document.addEventListener('click', e => {
         if(!last) return;
         state.redoStack.push(deepClone(last));
 
-        const { player, amount, redsDelta=0, colorsRemoved=[], foul=false } = last;
-        state.scores[player] = Math.max(0, state.scores[player] - amount);
+        if(last.type==='foul'){
+          const { player, points, prevBreak, prevHigh, endedBreak } = last;
+          state.scores[player] = Math.max(0, state.scores[player] - points);
+          if(endedBreak){
+            // We ended the selected player's break at submit time; restore that player's break
+            state.currentBreak[state.selected] = prevBreak;
+            state.highBreak[state.selected] = prevHigh;
+          }
+          renderScores(); updateDiff(); save(); return;
+        }
 
-        if(!foul){
-          state.currentBreak[player] = Math.max(0, state.currentBreak[player] - amount);
+        if(last.type==='pots'){
+          const { player, amount, redsDelta=0, colorsRemoved=[], prevBreak, prevHigh, endedBreak } = last;
+          state.scores[player] = Math.max(0, state.scores[player] - amount);
+
+          // restore balls
           state.redsLeft = clamp(state.redsLeft - redsDelta, 0, 15);
           if(colorsRemoved.length){
             colorsRemoved.forEach(v=>{
@@ -405,10 +439,17 @@ document.addEventListener('click', e => {
             });
             state.colorsRemaining.sort((a,b)=>a-b);
           }
-          recomputeHighBreaks();
-        }
 
-        renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility(); save();
+          if(endedBreak){
+            state.currentBreak[state.selected] = prevBreak;
+            state.highBreak[state.selected] = prevHigh;
+          } else {
+            state.currentBreak[player] = Math.max(0, state.currentBreak[player] - amount);
+            recomputeHighBreaks();
+          }
+
+          renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility(); save(); return;
+        }
       }
 
       function redo(){
@@ -416,12 +457,18 @@ document.addEventListener('click', e => {
         if(!last) return;
         state.history.push(deepClone(last));
 
-        const { player, amount, redsDelta=0, colorsRemoved=[], foul=false } = last;
-        state.scores[player] += amount;
+        if(last.type==='foul'){
+          const { player, points, endedBreak } = last;
+          state.scores[player] += points;
+          if(endedBreak) finalizeBreak(state.selected);
+          renderScores(); updateDiff(); save(); return;
+        }
 
-        if(!foul){
+        if(last.type==='pots'){
+          const { player, amount, redsDelta=0, colorsRemoved=[], endedBreak } = last;
+          state.scores[player] += amount;
           state.currentBreak[player] += amount;
-          if(state.currentBreak[player] > state.highBreak[player]) state.highBreak[player] = state.currentBreak[player];
+
           state.redsLeft = clamp(state.redsLeft + redsDelta, 0, 15);
           if(colorsRemoved.length){
             colorsRemoved.forEach(v=>{
@@ -429,9 +476,11 @@ document.addEventListener('click', e => {
               if(idx!==-1) state.colorsRemaining.splice(idx,1);
             });
           }
-        }
 
-        renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility(); save();
+          if(endedBreak) finalizeBreak(state.selected);
+
+          renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility(); save(); return;
+        }
       }
 
       // Ball visibility based on phase
@@ -446,7 +495,7 @@ document.addEventListener('click', e => {
         });
       }
 
-      // Breaks & derived displays
+      // Break helpers
       function finalizeBreak(player){
         if(state.currentBreak[player] > state.highBreak[player]){
           state.highBreak[player] = state.currentBreak[player];
@@ -518,12 +567,11 @@ document.addEventListener('click', e => {
       qs('#undoBtn').addEventListener('click', undo);
       qs('#redoBtn').addEventListener('click', redo);
 
-      // FULLSCREEN-SAFE "New Game" modal (no native confirm)
+      // Modal (safe confirm)
       const modal = qs('#confirmModal'), openModal=()=>modal.style.display='flex', closeModal=()=>modal.style.display='none';
       qs('#resetBtn').addEventListener('click', openModal);
       qs('#cancelReset').addEventListener('click', closeModal);
       qs('#confirmReset').addEventListener('click', ()=>{
-        // soft reset (no reload), keeps fullscreen
         Object.assign(state, {
           selected: 1,
           scores: {1:0,2:0},
@@ -550,14 +598,13 @@ document.addEventListener('click', e => {
         else { document.documentElement.requestFullscreen(); }
       });
 
-      // Select by clicking panel (except when clicking name contenteditable)
+      // Select by clicking panel (except when clicking name)
       qs('#p1').addEventListener('click', e=>{ if(!e.target.classList.contains('name')) selectPlayer(1); });
       qs('#p2').addEventListener('click', e=>{ if(!e.target.classList.contains('name')) selectPlayer(2); });
 
       // Init
       selectPlayer(state.selected);
       renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility();
-      // Set initial FS label
       qs('#fsBtn').textContent = document.fullscreenElement ? '🗗 Exit Fullscreen' : '⛶ Fullscreen';
     })();
   </script>
@@ -569,18 +616,15 @@ async function requestWakeLock() {
   try { wakeLock = await navigator.wakeLock.request('screen'); }
   catch(e) { /* ignore */ }
 }
-// Try to re-acquire on visibility change
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
 });
-// Orientation lock (best-effort)
 if (screen.orientation && screen.orientation.lock) {
   screen.orientation.lock('landscape').catch(()=>{});
 }
-// Request wake lock on first user interaction
 window.addEventListener('pointerdown', requestWakeLock, { once: true });
 
-// Basic service worker register (for offline)
+// Service worker register (optional if you host sw.js)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
