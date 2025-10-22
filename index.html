@@ -39,13 +39,13 @@
     .statCard.compact{padding:10px 12px}
     .statCard.compact h3{font-size:13px;margin-bottom:4px}
     .statCard.compact .big{font-size:clamp(20px,3.6vw,36px)}
-    .statCard.compact .controls{gap:6px}
+    .statCard.compact .controls{gap:6px;flex-wrap:wrap;justify-content:center}
     .statCard.compact .chip{
       background:#151515;border:1px solid #2a2a2a;border-radius:999px;
       padding:4px 8px;font-size:13px;line-height:1;white-space:nowrap
     }
     .statCard.compact .chip button{
-      background:transparent;border:1px solid #2a2a2a;color:var(--fg);
+      background:transparent;border:1px solid #2a2a2a;color:#fff;
       padding:2px 8px;border-radius:8px;margin:0 6px;cursor:pointer;font-size:14px;line-height:1
     }
     .statCard.compact .chip strong{min-width:26px;display:inline-block;text-align:center}
@@ -144,12 +144,14 @@
       <div class="statCard compact">
         <h3>Points Left</h3>
         <div class="big" id="pointsLeft">147</div>
-        <div class="controls" style="justify-content:center;margin-top:4px">
+        <div class="controls" style="margin-top:4px">
           <span class="chip">Reds left:
             <button id="redsMinus" aria-label="Decrease reds">−</button>
             <strong id="redsLeft">15</strong>
             <button id="redsPlus" aria-label="Increase reds">+</button>
           </span>
+          <!-- ⏱ NEW: Frame timer chip -->
+          <span class="chip">⏱ <strong id="frameTimer">00:00</strong></span>
         </div>
       </div>
 
@@ -331,7 +333,7 @@
         qs('#foulBadge').style.display = 'none';
       }
 
-      // Simulate normal (non-foul) sequence to determine reds/colours removal
+      // Simulate sequence (for red/colour removal)
       function simulatePendingSequence(){
         const redsBefore = state.redsLeft;
         let redsSim = redsBefore;
@@ -386,7 +388,7 @@
 
           state.history.push({
             type:'foul',
-            player: recipient,   // counts as "foul awarded to" this player
+            player: recipient,   // points awarded to this player
             points: state.pending,
             prevBreak, prevHigh,
             endedBreak: true,
@@ -629,7 +631,6 @@
       function setLogs(arr){ localStorage.setItem('snookerLogs', JSON.stringify(arr)); }
 
       function countFoulsAwarded(){
-        // counts how many foul events awarded points to each player this frame
         const f1 = state.history.filter(h=>h.type==='foul' && h.player===1).length;
         const f2 = state.history.filter(h=>h.type==='foul' && h.player===2).length;
         return {f1,f2};
@@ -652,7 +653,7 @@
           winner, margin,
           redsLeft: state.redsLeft,
           colorsRemaining: [...state.colorsRemaining],
-          notes: "" // you can add a UI for notes later
+          notes: ""
         };
       }
 
@@ -697,6 +698,7 @@
         clearPending();
         selectPlayer(1);
         renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility(); save();
+        startFrameTimer(); // ⏱ restart timer on new frame
       }
 
       // Modal (New Game)
@@ -714,7 +716,6 @@
         else { document.documentElement.requestFullscreen(); }
       });
       qs('#resultsBtn').addEventListener('click', ()=>{
-        // placeholder: navigate to a separate page you'll create later
         location.href = 'results.html';
       });
 
@@ -722,10 +723,38 @@
       qs('#p1').addEventListener('click', e=>{ if(!e.target.classList.contains('name')) selectPlayer(1); });
       qs('#p2').addEventListener('click', e=>{ if(!e.target.classList.contains('name')) selectPlayer(2); });
 
+      // --- ⏱ Frame timer logic ---
+      let timerHandle = null;
+      function formatHHMMSS(totalSec){
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        const pad = n => String(n).padStart(2,'0');
+        return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+      }
+      function updateTimerUI(){
+        const el = document.getElementById('frameTimer');
+        if (!el || !state.frameStartedAt) return;
+        const secs = Math.max(0, Math.floor((Date.now() - state.frameStartedAt) / 1000));
+        el.textContent = formatHHMMSS(secs);
+      }
+      function startFrameTimer(){
+        stopFrameTimer();
+        updateTimerUI();
+        timerHandle = setInterval(updateTimerUI, 1000);
+      }
+      function stopFrameTimer(){
+        if (timerHandle){ clearInterval(timerHandle); timerHandle = null; }
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') updateTimerUI();
+      });
+
       // Init
       selectPlayer(state.selected);
       renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff();
       qs('#fsBtn').textContent = document.fullscreenElement ? '🗗 Exit Fullscreen' : '⛶ Fullscreen';
+      startFrameTimer(); // ⏱ start ticking on load
     })();
   </script>
 
