@@ -76,9 +76,21 @@
     .chip button{background:transparent;border:1px solid #2a2a2a;color:var(--fg);padding:4px 10px;border-radius:10px;margin:0 6px;cursor:pointer;font-size:16px}
 
     /* Pending tray */
-    .pending{display:flex;justify-content:center;align-items:center;gap:12px;padding:6px 12px;color:#ccc}
+    .pending{display:flex;justify-content:center;align-items:center;gap:12px;padding:6px 12px;color:#ccc;flex-wrap:wrap}
     .pending .amount{font-size:clamp(18px,3.8vw,28px);font-weight:800}
     .pending button{background:#1f1f1f;border:1px solid #333;color:#eee;border-radius:10px;padding:8px 12px;cursor:pointer}
+
+    /* NEW: pending ball icons strip */
+    .pending .icons{
+      display:flex;align-items:center;gap:6px;
+      max-width:60vw;overflow-x:auto;white-space:nowrap;
+      background:#121212;border:1px solid #2a2a2a;border-radius:10px;
+      padding:4px 6px;
+    }
+    .miniBall{
+      width:18px;height:18px;border-radius:50%;border:2px solid #222;flex:0 0 auto;
+      box-shadow:0 1px 0 rgba(255,255,255,0.06) inset;
+    }
 
     /* Balls */
     .bottom{margin-top:auto;padding:14px}
@@ -150,7 +162,7 @@
             <strong id="redsLeft">15</strong>
             <button id="redsPlus" aria-label="Increase reds">+</button>
           </span>
-          <!-- ⏱ NEW: Frame timer chip -->
+          <!-- ⏱ Frame timer chip -->
           <span class="chip">⏱ <strong id="frameTimer">00:00</strong></span>
         </div>
       </div>
@@ -187,6 +199,8 @@
     <div class="pending" id="pendingTray" hidden>
       Pending for <strong id="pendingPlayer">P1</strong>:
       <span class="amount" id="pendingAmount">0</span>
+      <!-- NEW: visual sequence of balls -->
+      <div class="icons" id="pendingIcons" hidden></div>
       <span class="foulBadge" id="foulBadge">FOUL</span>
       <button id="clearPending">Clear</button>
     </div>
@@ -302,6 +316,38 @@
         qs('#pendingPlayer').textContent = name;
       }
 
+      // --- NEW: pending icon rendering ---
+      const ballClass = (v)=>{
+        switch(v){
+          case 1: return 'red';
+          case 2: return 'yellow';
+          case 3: return 'green';
+          case 4: return 'brown';
+          case 5: return 'blue';
+          case 6: return 'pink';
+          case 7: return 'black';
+          default: return '';
+        }
+      };
+      function renderPendingIcons(){
+        const wrap = qs('#pendingIcons');
+        if(!wrap) return;
+        wrap.innerHTML = '';
+        if(state.pendingFoul || state.pendingBalls.length===0){
+          wrap.hidden = true;
+          return;
+        }
+        wrap.hidden = false;
+        // show last 40 for safety; auto-scroll to end
+        state.pendingBalls.slice(-40).forEach(v=>{
+          const d=document.createElement('div');
+          d.className = 'miniBall '+ballClass(v);
+          d.title = String(v);
+          wrap.appendChild(d);
+        });
+        wrap.scrollLeft = wrap.scrollWidth;
+      }
+
       // Pending
       function addPending(points){
         if(state.pendingFoul) return;
@@ -322,6 +368,7 @@
         qs('#pendingAmount').textContent = state.pending;
         qs('#foulBadge').style.display = (state.pendingFoul && state.pending>0) ? 'inline-block' : 'none';
         updatePendingLabel();
+        renderPendingIcons();
       }
       function clearPending(){
         state.pending = 0;
@@ -331,6 +378,7 @@
         qs('#pendingAmount').textContent = 0;
         qs('#pendingTray').hidden = true;
         qs('#foulBadge').style.display = 'none';
+        renderPendingIcons();
       }
 
       // Simulate sequence (for red/colour removal)
@@ -662,7 +710,7 @@
         const sum = `${rec.p1.name} ${rec.p1.score} (HiB ${rec.p1.highBreak})  —  ${rec.p2.name} ${rec.p2.score} (HiB ${rec.p2.highBreak})\n`+
                     `Winner: ${rec.winner}${rec.winner!=='Tie' ? `  |  Margin: ${rec.margin}`:""}\n`+
                     `Fouls awarded: ${rec.p1.name} ${rec.p1.foulsFor}, ${rec.p2.name} ${rec.p2.foulsFor}\n`+
-                    `Reds left: ${rec.redsLeft} | Colours: ${rec.colorsRemaining.join(', ')||'—'}\n`+
+                    `Reds left: ${rec.redLeft} | Colours: ${rec.colorsRemaining?.join(', ')||'—'}\n`+
                     `Duration: ${rec.durationSec}s`;
         qs('#logSummary').textContent = sum;
         qs('#logModal').style.display = 'flex';
@@ -759,7 +807,7 @@
   </script>
 
 <script>
-// Wake Lock (keeps screen on)
+/* Wake Lock (keeps screen on) */
 let wakeLock;
 async function requestWakeLock() {
   try { wakeLock = await navigator.wakeLock.request('screen'); }
