@@ -336,6 +336,7 @@
       <div class="overlayHint">Tap anywhere to dismiss</div>
     </div>
   </div>
+
   <script>
     (function(){
       const qs = s=>document.querySelector(s);
@@ -372,9 +373,13 @@
       };
       document.addEventListener('click', e => { if (e.target.closest('button')) playTap(); });
 
-      // Restore from storage
-      const saved = JSON.parse(localStorage.getItem('snookerBoardV1')||'null');
-      if(saved){
+      // Safe restore from storage (prevents script crash = dead buttons)
+      let saved = null;
+      try {
+        saved = JSON.parse(localStorage.getItem('snookerBoardV1')||'null');
+      } catch (_) { /* bad/corrupt storage from older build; ignore */ }
+
+      if(saved && typeof saved === 'object'){
         Object.assign(state, saved);
         if(!Array.isArray(state.colorsRemaining)) state.colorsRemaining = [...ALL_COLORS];
         if(typeof state.pendingFoul!=='boolean') state.pendingFoul = false;
@@ -433,7 +438,6 @@
         state.pendingBalls.slice(-60).forEach((v,i)=>{
           const d=document.createElement('div');
           d.className = 'miniBall '+ballClass(v);
-          // small ring around the first ball if it was a free-ball shot
           if(state.pendingFreeBall && i===0){ d.style.outline='2px solid #cfe1ff'; d.style.outlineOffset='-1px'; }
           wrap.appendChild(d);
         });
@@ -508,7 +512,6 @@
         state.pendingBalls.forEach((v, i)=>{
           if(i === skipIndex){
             // FREE BALL: counts points but is always respotted (no table changes)
-            // Do nothing to redsSim/colorsSim/afterRed
             return;
           }
           if(v===1){
@@ -573,7 +576,7 @@
           finalizeBreak(sel);
           clearPending();
           renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff(); save();
-          maybeShowWinnerOverlay(); // in case this creates >7 lead with only black
+          maybeShowWinnerOverlay();
           return;
         }
 
@@ -588,7 +591,6 @@
           state.highBreak[p] = state.currentBreak[p];
           flashHighBreak(p);
         } else {
-          // keep stored highBreak if unchanged
           state.highBreak[p] = Math.max(state.highBreak[p], prevHigh);
         }
 
@@ -623,7 +625,6 @@
           const { player, points, prevBreak, prevHigh, endedBreak } = last;
           state.scores[player] = Math.max(0, state.scores[player] - points);
           if(endedBreak){
-            // restore last selected player's break/high (submit always ended break of selected)
             state.currentBreak[state.selected] = prevBreak;
             state.highBreak[state.selected] = prevHigh;
           }
@@ -779,18 +780,25 @@
         updatePointsLeft(); renderBallVisibility(); updateDiff(); save();
       });
 
-      /* ==== Fullscreen label toggle ==== */
-      qs('#fsBtn').addEventListener('click', () => {
-  const el = document.documentElement;
-  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-  const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-  if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
-    exit.call(document);
-  } else {
-    req.call(el);
-  }
-});
+      /* ==== Fullscreen toggle + label ==== */
+      function updateFsLabel(){
+        const inFs = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+        qs('#fsBtn').textContent = inFs ? '🗗 Exit Fullscreen' : '⛶ Fullscreen';
+      }
+      document.addEventListener('fullscreenchange', updateFsLabel);
+      document.addEventListener('webkitfullscreenchange', updateFsLabel);
+      document.addEventListener('msfullscreenchange', updateFsLabel);
 
+      qs('#fsBtn').addEventListener('click', () => {
+        const el = document.documentElement;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+        const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+        if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+          exit && exit.call(document);
+        } else {
+          req && req.call(el);
+        }
+      });
 
       /* ==== Events ==== */
       qsa('.ball').forEach(btn=>btn.addEventListener('click', ()=>addPending(Number(btn.dataset.points))));
@@ -953,42 +961,39 @@
       /* ==== Init ==== */
       selectPlayer(state.selected);
       renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff();
-      qs('#fsBtn').textContent = document.fullscreenElement ? '🗗 Exit Fullscreen' : '⛶ Fullscreen';
+      updateFsLabel();
       updateFreeBallUI();
       startFrameTimer();
     })();
   </script>
 
   <script>
-let wakeLock;
-async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      wakeLock = await navigator.wakeLock.request('screen');
-      wakeLock.addEventListener?.('release', ()=> { wakeLock = null; });
+    // Wake Lock & orientation, only after real user input
+    let wakeLock;
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener?.('release', ()=> { wakeLock = null; });
+        }
+      } catch(e) { /* ignored */ }
     }
-  } catch(e) { /* ignored */ }
-}
-function tryLockOrientation() {
-  try {
-    if (screen.orientation && screen.orientation.lock) {
-      screen.orientation.lock('landscape').catch(()=>{});
+    function tryLockOrientation() {
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(()=>{});
+        }
+      } catch(e) { /* ignored */ }
     }
-  } catch(e) { /* ignored */ }
-}
-// Only after a *direct* user action
-window.addEventListener('pointerdown', () => {
-  requestWakeLock();
-  tryLockOrientation();
-}, { once: true });
+    window.addEventListener('pointerdown', () => {
+      requestWakeLock();
+      tryLockOrientation();
+    }, { once: true });
 
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
-});
-</script>
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+    });
+  </script>
 
 </body>
 </html>
-
-
-
