@@ -684,6 +684,17 @@ document.getElementById('confirmReset').addEventListener('click', () => {
   confirmModal.style.display = 'none';
   softResetFrame();
 });
+// === View Results (navigate to results.html) ===
+document.getElementById('resultsBtn').addEventListener('click', () => {
+  try {
+    // Works both locally and on GitHub Pages
+    const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+    const target = base + 'results.html';
+    window.location.href = target;
+  } catch (e) {
+    console.error('Navigation to results.html failed:', e);
+  }
+});
 
   function softResetFrame(){
     Object.assign(state, {
