@@ -780,10 +780,17 @@
       });
 
       /* ==== Fullscreen label toggle ==== */
-      document.addEventListener('fullscreenchange', ()=>{
-        const btn = qs('#fsBtn');
-        btn.textContent = document.fullscreenElement ? '🗗 Exit Fullscreen' : '⛶ Fullscreen';
-      });
+      qs('#fsBtn').addEventListener('click', () => {
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+  if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+    exit.call(document);
+  } else {
+    req.call(el);
+  }
+});
+
 
       /* ==== Events ==== */
       qsa('.ball').forEach(btn=>btn.addEventListener('click', ()=>addPending(Number(btn.dataset.points))));
@@ -953,21 +960,35 @@
   </script>
 
   <script>
-  /* Wake Lock (keeps screen on) */
-  let wakeLock;
-  async function requestWakeLock() {
-    try { wakeLock = await navigator.wakeLock.request('screen'); }
-    catch(e) { /* ignore */ }
-  }
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
-  });
-  if (screen.orientation && screen.orientation.lock) {
-    screen.orientation.lock('landscape').catch(()=>{});
-  }
-  window.addEventListener('pointerdown', requestWakeLock, { once: true });
-  </script>
+let wakeLock;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener?.('release', ()=> { wakeLock = null; });
+    }
+  } catch(e) { /* ignored */ }
+}
+function tryLockOrientation() {
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(()=>{});
+    }
+  } catch(e) { /* ignored */ }
+}
+// Only after a *direct* user action
+window.addEventListener('pointerdown', () => {
+  requestWakeLock();
+  tryLockOrientation();
+}, { once: true });
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !wakeLock) requestWakeLock();
+});
+</script>
+
 </body>
 </html>
+
 
 
