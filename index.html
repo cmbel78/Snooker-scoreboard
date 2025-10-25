@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+  Snooker Scoreboard v3.0 – 25 Oct 2025
+  Fixed final-black winner logic and snooker calculation.
+  Author: Craig (poor bastard maintaining this beast)
+-->
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -235,6 +240,7 @@
   </div>
 </div>
 
+<!-- Modal: New Game -->
 <div class="modalBackdrop" id="confirmModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
     <h4 id="confirmTitle">Start a new game?</h4>
@@ -246,6 +252,7 @@
   </div>
 </div>
 
+<!-- Modal: End Frame (Log) -->
 <div class="modalBackdrop" id="logModal">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="logTitle">
     <h4 id="logTitle">End Frame & Save Result?</h4>
@@ -257,6 +264,7 @@
   </div>
 </div>
 
+<!-- Winner overlay -->
 <div id="winnerOverlay">
   <div class="confetti" id="confetti"></div>
   <div class="overlayInner">
@@ -279,7 +287,7 @@
   window.addEventListener('error', e => showErr(`${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`));
   window.addEventListener('unhandledrejection', e => showErr('Promise rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)));
 
-  // Minimal click sound so we know clicks fire
+  // Click sound so we know clicks fire
   document.addEventListener('click', e => {
     if (e.target.closest('button')) {
       const tap = document.getElementById('tapSound');
@@ -290,7 +298,6 @@
 
 <script>
 (function(){
-  // Guarded helpers so a single mistake doesn’t nuke everything
   const qs  = s => document.querySelector(s);
   const qsa = s => Array.from(document.querySelectorAll(s));
   const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
@@ -356,6 +363,19 @@
     el.classList.add('hibFlash');
     setTimeout(()=>el.classList.remove('hibFlash'), 1200);
   }
+  function finalizeBreak(player){
+    if(state.currentBreak[player] > state.highBreak[player]){
+      state.highBreak[player] = state.currentBreak[player];
+    }
+    state.currentBreak[player] = 0;
+    renderScores();
+  }
+  function recomputeHighBreaks(){
+    [1,2].forEach(p=>{
+      state.highBreak[p] = Math.min(state.scores[p], Math.max(state.highBreak[p], state.currentBreak[p]));
+    });
+  }
+
   function selectPlayer(p){
     if(state.selected!==p){ finalizeBreak(state.selected); }
     state.selected = p; state.pendingFor = p;
@@ -461,18 +481,6 @@
     return { redsDelta: redsSim - redsBefore, colorsAfter: colorsSim, colorsRemoved };
   }
 
-  function finalizeBreak(player){
-    if(state.currentBreak[player] > state.highBreak[player]){
-      state.highBreak[player] = state.currentBreak[player];
-    }
-    state.currentBreak[player] = 0; renderScores();
-  }
-  function recomputeHighBreaks(){
-    [1,2].forEach(p=>{
-      state.highBreak[p] = Math.min(state.scores[p], Math.max(state.highBreak[p], state.currentBreak[p]));
-    });
-  }
-
   function submitPending(){
     if(state.pending<=0) return;
     const sel = state.selected; const p = state.pendingFor;
@@ -555,41 +563,145 @@
     const lowest = Math.min(...state.colorsRemaining);
     return Math.max(4, lowest);
   }
+
+  // ===== Score Difference card logic (single source of truth) =====
   function updateDiff(){
-    const diff = state.scores[1]-state.scores[2];
+    const diff = state.scores[1] - state.scores[2];
     const lead = Math.abs(diff);
-    const leaderName = diff===0 ? '—' : (diff>0 ? (localStorage.getItem('snookerName1')||'Player 1') : (localStorage.getItem('snookerName2')||'Player 2'));
+
+    const leaderName = diff === 0
+      ? '—'
+      : (diff > 0 ? (localStorage.getItem('snookerName1') || 'Player 1')
+                  : (localStorage.getItem('snookerName2') || 'Player 2'));
+
     const reds = state.redsLeft;
-    const pointsLeft = reds>0 ? (reds*8 + 27) : sum(state.colorsRemaining);
+    const pointsLeft = reds > 0 ? (reds * 8 + 27) : sum(state.colorsRemaining);
     const minFoul = getMinFoul();
-    const twoFoulSwing = 2 * minFoul;
-    const snookersRequired = lead > pointsLeft;
-    const beyondTwoFouls = lead > pointsLeft + twoFoulSwing;
+    const needsSnookers = lead > pointsLeft;
 
     const diffEl = qs('#scoreDiff');
-    diffEl.textContent = lead;
-    diffEl.classList.toggle('dangerText', snookersRequired);
-
     const leaderLabelEl = qs('#leaderLabel');
     const leaderEl = qs('#leader');
-    if (snookersRequired){ leaderLabelEl.textContent = ''; leaderEl.textContent = 'Snookers required'; }
-    else { leaderLabelEl.textContent = 'Leader:'; leaderEl.textContent = leaderName; }
 
-    const cheeky = qs('#cheekyMsg');
-    cheeky.hidden = !beyondTwoFouls;
-    if (!cheeky.hidden) cheeky.textContent = `Even two fouls won’t be enough (min foul ${minFoul}).`;
+    // Big number: always the lead
+    diffEl.textContent = lead;
+
+    // Frame finished: no points left
+    if (pointsLeft === 0){
+      diffEl.classList.remove('dangerText');
+      if (lead === 0){
+        leaderLabelEl.textContent = '';
+        leaderEl.textContent = 'Re-spot black';
+      } else {
+        leaderLabelEl.textContent = 'Winner:';
+        leaderEl.textContent = leaderName;
+      }
+      return;
+    }
+
+    // In-play states
+    diffEl.classList.toggle('dangerText', needsSnookers);
+
+    if (needsSnookers){
+      const deficit = lead - pointsLeft;
+      const snookersNeeded = Math.max(1, Math.ceil(deficit / minFoul));
+      leaderLabelEl.textContent = '';
+      leaderEl.textContent = `${snookersNeeded} snooker${snookersNeeded>1?'s':''} required (${minFoul}pt)`;
+    } else {
+      leaderLabelEl.textContent = 'Leader:';
+      leaderEl.textContent = leaderName;
+    }
   }
 
+  // ===== Winner overlay logic =====
+  function onlyBlackRemains(){
+    return state.redsLeft === 0 &&
+           state.colorsRemaining.length === 1 &&
+           state.colorsRemaining[0] === 7;
+  }
+  function frameOver(){ // all balls gone
+    return state.redsLeft === 0 && state.colorsRemaining.length === 0;
+  }
+
+  const overlay = qs('#winnerOverlay');
+
+  function maybeShowWinnerOverlay(){
+    const s1 = state.scores[1], s2 = state.scores[2];
+    const diff = s1 - s2;
+    const lead = Math.abs(diff);
+
+    // Case A: mathematically done before final black (lead >7 with only black on)
+    if (onlyBlackRemains() && lead > 7){
+      const winner = diff > 0 ? (localStorage.getItem('snookerName1')||'Player 1')
+                              : (localStorage.getItem('snookerName2')||'Player 2');
+      showWinnerOverlay(winner, s1, s2);
+      return;
+    }
+
+    // Case B: final black has been potted (frame finished)
+    if (frameOver()){
+      if (lead === 0){
+        // Re-spot black situation – neutral overlay
+        qs('#winName').textContent = 'Re-spot black';
+        qs('#winScores').textContent = `${s1} — ${s2}`;
+        buildConfetti();
+        overlay.style.display = 'flex';
+      } else {
+        const winner = diff > 0 ? (localStorage.getItem('snookerName1')||'Player 1')
+                                : (localStorage.getItem('snookerName2')||'Player 2');
+        showWinnerOverlay(winner, s1, s2);
+      }
+    }
+  }
+
+  function showWinnerOverlay(name, s1, s2){
+    qs('#winName').textContent = name;
+    qs('#winScores').textContent = `${s1} — ${s2}`;
+    buildConfetti();
+    overlay.style.display = 'flex';
+  }
+  function hideWinnerOverlay(){ overlay.style.display = 'none'; qs('#confetti').innerHTML=''; }
+  overlay.addEventListener('click', hideWinnerOverlay);
+
+  function buildConfetti(){
+    const c = qs('#confetti'); c.innerHTML = '';
+    const colors = ['#ffd76a','#ff7aa2','#78a6ff','#7cffc1','#fff176','#cfd8ff'];
+    const pieces = 80; const vw = window.innerWidth;
+    for(let i=0;i<pieces;i++){
+      const d=document.createElement('div');
+      d.className='piece'; d.style.left = Math.random()*vw + 'px';
+      d.style.background = colors[i % colors.length];
+      d.style.animationDuration = (6 + Math.random()*4) + 's';
+      d.style.animationDelay = (Math.random()*1.2) + 's';
+      d.style.opacity = .75 + Math.random()*.25;
+      d.style.transform = `translateY(-10vh) rotate(${Math.random()*360}deg)`;
+      c.appendChild(d);
+    }
+  }
+
+  // ===== Points/Timer/UI =====
   function updatePointsLeft(){
-  const reds = state.redsLeft;
-  const points = reds>0 ? (reds*8 + 27) : sum(state.colorsRemaining);
-  qs('#pointsLeft').textContent = points;
-  qs('#redsLeft').textContent = state.redsLeft;
-  maybeShowWinnerOverlay(); // trigger winner check automatically
-}
+    const reds = state.redsLeft;
+    const points = reds>0 ? (reds*8 + 27) : sum(state.colorsRemaining);
+    qs('#pointsLeft').textContent = points;
+    qs('#redsLeft').textContent = state.redsLeft;
+    maybeShowWinnerOverlay(); // auto trigger checks
+  }
 
+  let timerHandle=null;
+  function formatHHMMSS(totalSec){
+    const h=Math.floor(totalSec/3600), m=Math.floor((totalSec%3600)/60), s=totalSec%60;
+    const pad=n=>String(n).padStart(2,'0'); return h>0?`${h}:${pad(m)}:${pad(s)}`:`${pad(m)}:${pad(s)}`;
+  }
+  function updateTimerUI(){
+    const el = document.getElementById('frameTimer'); if(!el||!state.frameStartedAt) return;
+    const secs=Math.max(0, Math.floor((Date.now()-state.frameStartedAt)/1000)); el.textContent = formatHHMMSS(secs);
+  }
+  function startFrameTimer(){ stopFrameTimer(); updateTimerUI(); timerHandle = setInterval(updateTimerUI,1000); }
+  function stopFrameTimer(){ if(timerHandle){ clearInterval(timerHandle); timerHandle=null; } }
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') updateTimerUI(); });
 
-  // Wire handlers ASAP
+  // ===== Controls & wiring =====
   qs('#redsMinus').addEventListener('click', ()=>{
     const was = state.redsLeft;
     state.redsLeft = clamp(state.redsLeft-1, 0, 15);
@@ -628,6 +740,16 @@
   qs('#p1').addEventListener('click', e=>{ if(!e.target.classList.contains('name')) selectPlayer(1); });
   qs('#p2').addEventListener('click', e=>{ if(!e.target.classList.contains('name')) selectPlayer(2); });
 
+  // Results button -> /results.html (works local and on Pages)
+  document.getElementById('resultsBtn').addEventListener('click', () => {
+    try {
+      const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+      const target = base + 'results.html';
+      window.location.href = target;
+    } catch (e) { console.error('Navigation to results.html failed:', e); }
+  });
+
+  // Logging
   function getLogs(){ try{return JSON.parse(localStorage.getItem('snookerLogs')||'[]')}catch(_){return[]} }
   function setLogs(arr){ try{localStorage.setItem('snookerLogs', JSON.stringify(arr))}catch(_){} }
   function countFoulsAwarded(){
@@ -672,29 +794,19 @@
     const logs = getLogs(); logs.push(buildFrameRecord()); setLogs(logs);
     closeLogModal(); softResetFrame();
   });
-  // === New Game (confirm) ===
-const confirmModal = document.getElementById('confirmModal');
-document.getElementById('resetBtn').addEventListener('click', () => {
-  confirmModal.style.display = 'flex';
-});
-document.getElementById('cancelReset').addEventListener('click', () => {
-  confirmModal.style.display = 'none';
-});
-document.getElementById('confirmReset').addEventListener('click', () => {
-  confirmModal.style.display = 'none';
-  softResetFrame();
-});
-// === View Results (navigate to results.html) ===
-document.getElementById('resultsBtn').addEventListener('click', () => {
-  try {
-    // Works both locally and on GitHub Pages
-    const base = location.origin + location.pathname.replace(/[^/]*$/, '');
-    const target = base + 'results.html';
-    window.location.href = target;
-  } catch (e) {
-    console.error('Navigation to results.html failed:', e);
-  }
-});
+
+  // New Game modal
+  const confirmModal = document.getElementById('confirmModal');
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    confirmModal.style.display = 'flex';
+  });
+  document.getElementById('cancelReset').addEventListener('click', () => {
+    confirmModal.style.display = 'none';
+  });
+  document.getElementById('confirmReset').addEventListener('click', () => {
+    confirmModal.style.display = 'none';
+    softResetFrame();
+  });
 
   function softResetFrame(){
     Object.assign(state, {
@@ -706,54 +818,7 @@ document.getElementById('resultsBtn').addEventListener('click', () => {
     renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility(); save(); startFrameTimer();
   }
 
-  function onlyBlackRemains(){ return state.redsLeft===0 && state.colorsRemaining.length===1 && state.colorsRemaining[0]===7; }
-  function maybeShowWinnerOverlay(){
-    if(!onlyBlackRemains()) return;
-    const diff = state.scores[1] - state.scores[2]; const lead = Math.abs(diff);
-    if(lead > 7){
-      const winner = diff>0 ? (localStorage.getItem('snookerName1')||'Player 1') : (localStorage.getItem('snookerName2')||'Player 2');
-      showWinnerOverlay(winner, state.scores[1], state.scores[2]);
-    }
-  }
-  const overlay = qs('#winnerOverlay');
-  function showWinnerOverlay(name, s1, s2){
-    qs('#winName').textContent = name;
-    qs('#winScores').textContent = `${s1} — ${s2}`;
-    buildConfetti(); overlay.style.display = 'flex';
-  }
-  function hideWinnerOverlay(){ overlay.style.display = 'none'; qs('#confetti').innerHTML=''; }
-  overlay.addEventListener('click', hideWinnerOverlay);
-
-  function buildConfetti(){
-    const c = qs('#confetti'); c.innerHTML = '';
-    const colors = ['#ffd76a','#ff7aa2','#78a6ff','#7cffc1','#fff176','#cfd8ff'];
-    const pieces = 80; const vw = window.innerWidth;
-    for(let i=0;i<pieces;i++){
-      const d=document.createElement('div');
-      d.className='piece'; d.style.left = Math.random()*vw + 'px';
-      d.style.background = colors[i % colors.length];
-      d.style.animationDuration = (6 + Math.random()*4) + 's';
-      d.style.animationDelay = (Math.random()*1.2) + 's';
-      d.style.opacity = .75 + Math.random()*.25;
-      d.style.transform = `translateY(-10vh) rotate(${Math.random()*360}deg)`;
-      c.appendChild(d);
-    }
-  }
-
-  let timerHandle=null;
-  function formatHHMMSS(totalSec){
-    const h=Math.floor(totalSec/3600), m=Math.floor((totalSec%3600)/60), s=totalSec%60;
-    const pad=n=>String(n).padStart(2,'0'); return h>0?`${h}:${pad(m)}:${pad(s)}`:`${pad(m)}:${pad(s)}`;
-  }
-  function updateTimerUI(){
-    const el = document.getElementById('frameTimer'); if(!el||!state.frameStartedAt) return;
-    const secs=Math.max(0, Math.floor((Date.now()-state.frameStartedAt)/1000)); el.textContent = formatHHMMSS(secs);
-  }
-  function startFrameTimer(){ stopFrameTimer(); updateTimerUI(); timerHandle = setInterval(updateTimerUI,1000); }
-  function stopFrameTimer(){ if(timerHandle){ clearInterval(timerHandle); timerHandle=null; } }
-  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') updateTimerUI(); });
-
-  // Init last (but handlers are already wired)
+  // Init
   selectPlayer(state.selected);
   renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff(); updateFreeBallUI(); startFrameTimer(); updateFsLabel();
 })();
