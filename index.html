@@ -835,7 +835,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const sum = `${rec.p1.name} ${rec.p1.score} (HiB ${rec.p1.highBreak})  —  ${rec.p2.name} ${rec.p2.score} (HiB ${rec.p2.highBreak})\n`+
                     `Winner: ${rec.winner}${rec.winner!=='Tie' ? `  |  Margin: ${rec.margin}`:""}\n`+
                     `Fouls awarded: ${rec.p1.name} ${rec.p1.foulsFor}, ${rec.p2.name} ${rec.p2.foulsFor}\n`+
-                    `Reds left: ${rec.redLeft} | Colours: ${rec.colorsRemaining?.join(', ')||'—'}\n`+
+                    `Reds left: ${rec.redsLeft} | Colours: ${rec.colorsRemaining?.join(', ')||'—'}\n`+
                     `Duration: ${rec.durationSec}s`;
         qs('#logSummary').textContent = sum;
         qs('#logModal').style.display = 'flex';
@@ -975,3 +975,4 @@ window.addEventListener('DOMContentLoaded', () => {
   </script>
 </body>
 </html>
+
