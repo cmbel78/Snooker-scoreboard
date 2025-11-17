@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<!--
+  Snooker Scoreboard v3.0 – 25 Oct 2025
+  Fixed final-black winner logic and snooker calculation.
+  Author: Craig (poor bastard maintaining this beast)
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Snooker Scoreboard (Safe Mode)</title>
+<style>
+  :root{
+    --bg:#000; --fg:#fff; --muted:#9aa0a6; --accent:#fff;
+    --panel:#111; --panel2:#0b0b0b; --outline:#fff;
+    --btnSize:150px; --danger:#ff4d4f; --cheeky:#f5c542; --primary:#0a84ff;
+    --winGrad1:#1e003e; --winGrad2:#001f4d;
+    --gold:#ffd76a; --silver:#a6c8ff; --glass:rgba(255,255,255,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%}
+  body{touch-action:manipulation}
+  button{-webkit-tap-highlight-color:transparent}
+  .app{display:flex;flex-direction:column;height:100%;max-width:1400px;margin:0 auto}
+
+  .players{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px}
+  .player{background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border-radius:16px;padding:18px;position:relative;min-height:170px;overflow:hidden}
+  .player .name{font-size:clamp(18px,3.5vw,28px);font-weight:700;cursor:pointer;display:inline-block}
+  .score{font-size:clamp(56px,9vw,108px);line-height:1;margin:10px 0 4px;font-weight:800}
+  .selected .score{outline:3px solid var(--outline);outline-offset:6px;border-radius:12px;padding:6px 10px}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:clamp(12px,2.2vw,15px)}
+  .meta div strong{color:var(--fg)}
+
+  .hibFlash::after{
+    content:"";
+    position:absolute; inset:-4px;
+    background:radial-gradient(1200px 400px at 50% -20%, rgba(255,215,106,.25), transparent 60%),
+               radial-gradient(800px 300px at 50% 120%, rgba(166,200,255,.15), transparent 60%);
+    border-radius:18px; animation:hibPulse 1200ms ease-out; pointer-events:none;
+  }
+  @keyframes hibPulse{0%{opacity:0;transform:scale(.98)}20%{opacity:1}100%{opacity:0;transform:scale(1.02)}}
+
+  .middle{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;padding:8px 14px}
+  .statCard{background:#121212;border:1px solid #222;border-radius:12px;padding:14px;text-align:center}
+  .statCard h3{margin:0 0 6px;font-size:14px;color:var(--muted)}
+  .statCard .big{font-size:clamp(22px,4.5vw,44px);font-weight:800}
+  .dangerText{color:var(--danger)!important}
+
+  .statCard.compact{padding:10px 12px}
+  .statCard.compact h3{font-size:13px;margin-bottom:4px}
+  .statCard.compact .big{font-size:clamp(20px,3.6vw,36px)}
+  .statCard.compact .controls{gap:6px;flex-wrap:wrap;justify-content:center}
+  .statCard.compact .chip{
+    background:#151515;border:1px solid #2a2a2a;border-radius:999px;
+    padding:4px 8px;font-size:13px;line-height:1;white-space:nowrap
+  }
+  .statCard.compact .chip button{
+    background:transparent;border:1px solid #2a2a2a;color:#fff;
+    padding:2px 8px;border-radius:8px;margin:0 6px;cursor:pointer;font-size:14px;line-height:1
+  }
+  .statCard.compact .chip strong{min-width:26px;display:inline-block;text-align:center}
+
+  .btnCol{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .btnRow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .undoBtn,.resetBtn,.logBtn,.resultsBtn{background:#1e1e1e;border:1px solid #333;color:#eee;
+    padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800;font-size:15px}
+  .logBtn{background:var(--primary);border-color:var(--primary);color:#fff}
+  .resultsBtn{background:#2a2a2a}
+  .undoBtn:active,.resetBtn:active,.logBtn:active,.resultsBtn:active{transform:translateY(1px)}
+
+  .foulRow{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .foulBtn{
+    width:48px;height:48px;border-radius:999px;border:2px solid #555;
+    background:#fff;color:#000;font-weight:900;font-size:16px;cursor:pointer;
+  }
+  .foulBtn:active{transform:translateY(1px)}
+  .redoBtn{background:#1e1e1e;border:1px solid #333;color:#eee;
+    padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800;font-size:15px}
+  .redoBtn:active{transform:translateY(1px)}
+  .foulBadge{background:#2b2b2b;border:1px solid #3a3a3a;border-radius:999px;
+    padding:4px 10px;margin-left:8px;font-size:14px;display:none}
+
+  .freeBallBtn{
+    padding:10px 14px;border-radius:999px;border:2px solid #3c7cff;
+    background:rgba(10,132,255,.12); color:#cfe1ff; font-weight:800; letter-spacing:.3px;
+    cursor:pointer; transition:box-shadow .2s, transform .1s, background .2s;
+  }
+  .freeBallBtn:active{transform:translateY(1px)}
+  .freeBallBtn.armed{background:rgba(10,132,255,.22); box-shadow:0 0 0 6px rgba(10,132,255,.08), 0 0 22px rgba(10,132,255,.35) inset}
+
+  .controls{display:flex;align-items:center;gap:12px}
+  .chip{background:#121212;border:1px solid #2a2a2a;border-radius:999px;padding:8px 12px;font-size:15px}
+  .chip button{background:transparent;border:1px solid #2a2a2a;color:var(--fg);padding:4px 10px;border-radius:10px;margin:0 6px;cursor:pointer;font-size:16px}
+
+  .pending{display:flex;justify-content:center;align-items:center;gap:12px;padding:6px 12px;color:#ccc;flex-wrap:wrap}
+  .pending .amount{font-size:clamp(18px,3.8vw,28px);font-weight:800}
+  .pending button{background:#1f1f1f;border:1px solid #333;color:#eee;border-radius:10px;padding:8px 12px;cursor:pointer}
+
+  .pending .icons{
+    display:flex;align-items:center;gap:6px;max-width:60vw;overflow-x:auto;white-space:nowrap;
+    background:#121212;border:1px solid #2a2a2a;border-radius:10px;padding:4px 6px;
+  }
+  .miniBall{width:18px;height:18px;border-radius:50%;border:2px solid #222;flex:0 0 auto;box-shadow:0 1px 0 rgba(255,255,255,0.06) inset}
+
+  .bottom{margin-top:auto;padding:14px}
+  .ballRow{display:grid;grid-template-columns:repeat(8,1fr);gap:12px;align-items:center}
+  .ball{width:var(--btnSize);height:var(--btnSize);border-radius:50%;border:3px solid #333;
+    display:flex;align-items:center;justify-content:center;margin:0 auto;font-weight:900;
+    font-size:24px;cursor:pointer;color:#d0d0d0}
+  .ball:active{transform:translateY(1px)}
+  .red{background:#b40000}.yellow{background:#ffd400}.green{background:#177a2f}
+  .brown{background:#6b4423}.blue{background:#0f5db3}.pink{background:#ff5fa2}
+  .black{background:#111;border-color:#666}
+  .submit{grid-column:8 / 9;background:#0a84ff;color:#fff;border:none;border-radius:12px;
+    padding:18px 12px;font-weight:800;cursor:pointer;font-size:16px}
+  .submit:active{transform:translateY(1px)}
+
+  @media(max-width:1100px){:root{--btnSize:120px}.foulBtn{width:44px;height:44px;font-size:15px}}
+  @media(max-width:920px){:root{--btnSize:84px}}
+  @media(max-width:760px){:root{--btnSize:72px}}
+
+  .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999}
+  .modal{background:#141414;border:1px solid #2a2a2a;border-radius:14px;padding:18px;min-width:280px;max-width:92%}
+  .modal h4{margin:0 0 10px;font-size:18px}
+  .modal p{margin:0 0 16px;color:#ccc}
+  .modal .row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+  .btn{background:#1e1e1e;border:1px solid #333;color:#eee;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700}
+  .btn.primary{background:#0a84ff;border-color:#0a84ff}
+  .cheeky{margin-top:8px;font-size:13px;color:var(--cheeky);text-align:center}
+  .cheeky[hidden]{display:none}
+
+  #winnerOverlay{position:fixed;inset:0;z-index:10000;display:none;background:
+    radial-gradient(1200px 700px at 50% -20%, rgba(255,215,106,.20), transparent 60%),
+    radial-gradient(1000px 600px at 50% 120%, rgba(166,200,255,.12), transparent 60%),
+    linear-gradient(135deg, var(--winGrad1), var(--winGrad2));backdrop-filter:blur(2px);
+    align-items:center;justify-content:center;cursor:pointer}
+  .overlayInner{text-align:center;padding:24px 16px;max-width:90%;color:#fff;text-shadow:0 4px 14px rgba(0,0,0,.6);animation:popIn 500ms ease-out}
+  .overlayBadge{display:inline-block;padding:6px 14px;font-weight:900;letter-spacing:.2em;border:1px solid rgba(255,255,255,.25);border-radius:999px;font-size:14px;background:rgba(255,255,255,.06)}
+  .overlayTitle{font-size:min(14vw,92px);line-height:1.05;margin:12px 0 4px;font-weight:900;
+    background:linear-gradient(180deg,#fff,#cfe1ff 55%,#78a6ff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 8px 24px rgba(0,0,0,.35))}
+  .overlayName{font-size:min(9vw,56px);margin:8px 0 8px;font-weight:900;color:var(--gold);letter-spacing:.02em}
+  .overlayScores{font-size:min(6.5vw,40px);opacity:.92}
+  .overlayHint{margin-top:18px;font-size:14px;color:#d7e3ff;opacity:.8}
+  @keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+  /* Error banner */
+  #errbar{position:fixed;top:0;left:0;right:0;background:#b00020;color:#fff;padding:10px 14px;font:14px/1.4 system-ui, sans-serif;z-index:99999;display:none;white-space:pre-wrap}
+  #errbar strong{font-weight:900}
+</style>
+
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+<div id="errbar"></div>
+
+<audio id="tapSound" src="click.wav" preload="auto"></audio>
+
+<!-- Big-break sound effects (change .wav to .wav if needed) -->
+<audio id="bb1" src="07043057.wav" preload="auto"></audio>
+<audio id="bb2" src="07039015.wav" preload="auto"></audio>
+<audio id="bb3" src="07047078.wav" preload="auto"></audio>
+<audio id="bb4" src="07047077.wav" preload="auto"></audio>
+
+<!-- Nick's special theme -->
+<audio id="nickSfx" src="nick.wav" preload="auto"></audio>
+
+<div class="app" id="app">
+  <div class="players">
+    <div class="player" id="p1">
+      <div class="name" data-player="1" contenteditable="true" spellcheck="false">Player 1</div>
+      <div class="score" id="score1">0</div>
+      <div class="meta"><div>High break: <strong id="hb1">0</strong></div></div>
+    </div>
+    <div class="player" id="p2">
+      <div class="name" data-player="2" contenteditable="true" spellcheck="false">Player 2</div>
+      <div class="score" id="score2">0</div>
+      <div class="meta"><div>High break: <strong id="hb2">0</strong></div></div>
+    </div>
+  </div>
+
+  <div class="middle">
+    <div class="statCard compact">
+      <h3>Points Left</h3>
+      <div class="big" id="pointsLeft">147</div>
+      <div class="controls" style="margin-top:4px">
+        <span class="chip">Reds left:
+          <button id="redsMinus" aria-label="Decrease reds">−</button>
+          <strong id="redsLeft">15</strong>
+          <button id="redsPlus" aria-label="Increase reds">+</button>
+        </span>
+        <span class="chip">⏱ <strong id="frameTimer">00:00</strong></span>
+      </div>
+    </div>
+
+    <div class="btnCol">
+      <div class="btnRow">
+        <button class="undoBtn" id="undoBtn">⟲ Undo</button>
+        <button class="redoBtn" id="redoBtn">↻ Redo</button>
+        <button class="logBtn" id="endFrameBtn">🏁 End Frame (Log)</button>
+      </div>
+      <div class="btnRow">
+        <button class="resetBtn" id="resetBtn">🆕 New Game</button>
+        <button class="resultsBtn" id="resultsBtn">📜 View Results</button>
+        <button class="resetBtn" id="fsBtn">⛶ Fullscreen</button>
+      </div>
+      <div class="foulRow">
+        <button class="foulBtn" data-foul="4">F4</button>
+        <button class="foulBtn" data-foul="5">F5</button>
+        <button class="foulBtn" data-foul="6">F6</button>
+        <button class="foulBtn" data-foul="7">F7</button>
+        <button class="freeBallBtn" id="freeBallBtn" title="Next ball is respotted (one-shot)">FREE BALL</button>
+      </div>
+    </div>
+
+    <div class="statCard">
+      <h3>Score Difference</h3>
+      <div class="big" id="scoreDiff">0</div>
+      <div class="controls" style="justify-content:center;margin-top:6px">
+        <span class="chip"><span id="leaderLabel">Leader:</span> <strong id="leader">—</strong></span>
+      </div>
+      <div id="cheekyMsg" class="cheeky" hidden>Even two fouls won’t be enough.</div>
+    </div>
+  </div>
+
+  <div class="pending" id="pendingTray" hidden>
+    Pending for <strong id="pendingPlayer">P1</strong>:
+    <span class="amount" id="pendingAmount">0</span>
+    <div class="icons" id="pendingIcons" hidden></div>
+    <span class="foulBadge" id="foulBadge">FOUL</span>
+    <button id="clearPending">Clear</button>
+  </div>
+
+  <div class="bottom">
+    <div class="ballRow">
+      <button class="ball red" data-points="1" aria-label="Red 1">1</button>
+      <button class="ball yellow" data-points="2" aria-label="Yellow 2">2</button>
+      <button class="ball green" data-points="3" aria-label="Green 3">3</button>
+      <button class="ball brown" data-points="4" aria-label="Brown 4">4</button>
+      <button class="ball blue" data-points="5" aria-label="Blue 5">5</button>
+      <button class="ball pink" data-points="6" aria-label="Pink 6">6</button>
+      <button class="ball black" data-points="7" aria-label="Black 7">7</button>
+      <button class="submit" id="submitBtn">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: New Game -->
+<div class="modalBackdrop" id="confirmModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <h4 id="confirmTitle">Start a new game?</h4>
+    <p>This will clear scores, breaks, reds, and history. Player names stay.</p>
+    <div class="row">
+      <button class="btn" id="cancelReset">Cancel</button>
+      <button class="btn primary" id="confirmReset">Yes, reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: End Frame (Log) -->
+<div class="modalBackdrop" id="logModal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="logTitle">
+    <h4 id="logTitle">End Frame & Save Result?</h4>
+    <p id="logSummary">Summary goes here…</p>
+    <div class="row">
+      <button class="btn" id="cancelLog">Cancel</button>
+      <button class="btn primary" id="confirmLog">Save & Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Winner overlay -->
+<div id="winnerOverlay">
+  <div class="confetti" id="confetti"></div>
+  <div class="overlayInner">
+    <div class="overlayBadge">FRAME STATUS</div>
+    <div class="overlayTitle">WINNER</div>
+    <div class="overlayName" id="winName">Player</div>
+    <div class="overlayScores" id="winScores">0 — 0</div>
+    <div class="overlayHint">Tap anywhere to dismiss</div>
+  </div>
+</div>
+
+<script>
+  // Error banner so Chrome can't hide problems
+  const errbar = document.getElementById('errbar');
+  function showErr(msg){
+    errbar.style.display = 'block';
+    errbar.textContent = 'Script error: ' + msg;
+    console.error(msg);
+  }
+  window.addEventListener('error', e => showErr(`${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`));
+  window.addEventListener('unhandledrejection', e => showErr('Promise rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)));
+
+  // Click sound so we know clicks fire
+  document.addEventListener('click', e => {
+    if (e.target.closest('button')) {
+      const tap = document.getElementById('tapSound');
+      if (tap) { tap.currentTime = 0; tap.play().catch(()=>{}); }
+    }
+  });
+</script>
+
+<script>
+(function(){
+  const qs  = s => document.querySelector(s);
+  const qsa = s => Array.from(document.querySelectorAll(s));
+  const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+  const sum = arr => arr.reduce((a,b)=>a+b,0);
+  const ALL_COLORS = [2,3,4,5,6,7];
+
+  // === Big-break sound logic ===
+  const BIG_BREAK_SFX = ['bb1','bb2','bb3','bb4'];
+
+  function playSfx(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+      el.currentTime = 0;
+      el.play().catch(()=>{});
+    } catch (e) {}
+  }
+
+  function getPlayerName(p){
+    const stored = localStorage.getItem('snookerName'+p);
+    if (stored && stored.trim()) return stored.trim();
+    const el = document.querySelector('.name[data-player="'+p+'"]');
+    return (el?.textContent || ('Player '+p)).trim();
+  }
+
+  // visitTotal = points in this single visit (one Submit)
+  function playBigBreakSfx(player, visitTotal){
+    if (visitTotal <= 15) return;
+
+    const name = getPlayerName(player).toLowerCase();
+    // any name starting with "nick" gets the special sound
+    if (name.startsWith('nick')) {
+      playSfx('nickSfx');
+      return;
+    }
+
+    const idx = Math.floor(Math.random() * BIG_BREAK_SFX.length);
+    playSfx(BIG_BREAK_SFX[idx]);
+  }
+
+  const state = {
+    selected: 1,
+    scores: {1:0,2:0},
+    currentBreak: {1:0,2:0},
+    highBreak: {1:0,2:0},
+    pending: 0, pendingBalls: [], pendingFor: 1, pendingFoul: false,
+    freeBallArmed: false, pendingFreeBall: false,
+    redsLeft: 15, colorsRemaining: [...ALL_COLORS],
+    history: [], redoStack: [],
+    frameStartedAt: Date.now()
+  };
+
+  // Safe restore
+  try {
+    const raw = localStorage.getItem('snookerBoardV1');
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (saved && typeof saved === 'object') {
+        Object.assign(state, saved);
+        if (!Array.isArray(state.colorsRemaining)) state.colorsRemaining = [...ALL_COLORS];
+        if (typeof state.pendingFoul !== 'boolean') state.pendingFoul = false;
+        if (typeof state.freeBallArmed !== 'boolean') state.freeBallArmed = false;
+        if (!state.frameStartedAt) state.frameStartedAt = Date.now();
+      }
+    }
+  } catch (e) {
+    console.warn('Bad localStorage; clearing.', e);
+    localStorage.removeItem('snookerBoardV1');
+  }
+
+  function save(){
+    try{
+      localStorage.setItem('snookerBoardV1', JSON.stringify({
+        selected: state.selected,
+        scores: state.scores,
+        currentBreak: state.currentBreak,
+        highBreak: state.highBreak,
+        pending: 0, pendingBalls: [], pendingFor: state.selected, pendingFoul: false,
+        freeBallArmed: state.freeBallArmed,
+        redsLeft: state.redsLeft,
+        colorsRemaining: state.colorsRemaining,
+        history: state.history,
+        frameStartedAt: state.frameStartedAt
+      }));
+    }catch(e){ console.warn('Save failed', e); }
+  }
+
+  function getBallBtn(v){ return document.querySelector(`.ball[data-points="${v}"]`); }
+  function renderScores(){
+    qs('#score1').textContent = state.scores[1];
+    qs('#score2').textContent = state.scores[2];
+    qs('#hb1').textContent = state.highBreak[1];
+    qs('#hb2').textContent = state.highBreak[2];
+  }
+  function flashHighBreak(p){
+    const el = p===1 ? qs('#p1') : qs('#p2');
+    el.classList.add('hibFlash');
+    setTimeout(()=>el.classList.remove('hibFlash'), 1200);
+  }
+  function finalizeBreak(player){
+    if(state.currentBreak[player] > state.highBreak[player]){
+      state.highBreak[player] = state.currentBreak[player];
+    }
+    state.currentBreak[player] = 0;
+    renderScores();
+  }
+  function recomputeHighBreaks(){
+    [1,2].forEach(p=>{
+      state.highBreak[p] = Math.min(state.scores[p], Math.max(state.highBreak[p], state.currentBreak[p]));
+    });
+  }
+
+  function selectPlayer(p){
+    if(state.selected!==p){ finalizeBreak(state.selected); }
+    state.selected = p; state.pendingFor = p;
+    qs('#p1').classList.toggle('selected', p===1);
+    qs('#p2').classList.toggle('selected', p===2);
+    updatePendingLabel(); save(); renderBallVisibility(); updateDiff();
+  }
+  function updatePendingLabel(){
+    const name = localStorage.getItem('snookerName'+state.pendingFor) || ('Player '+state.pendingFor);
+    qs('#pendingPlayer').textContent = name;
+  }
+  qsa('.name').forEach(el=>{
+    const savedName = localStorage.getItem('snookerName'+el.dataset.player);
+    if(savedName) el.textContent = savedName;
+    el.addEventListener('input',()=>{
+      localStorage.setItem('snookerName'+el.dataset.player, el.textContent.trim());
+      updatePendingLabel(); updateDiff();
+    });
+    el.addEventListener('click', ()=>selectPlayer(Number(el.dataset.player)));
+  });
+
+  const ballClass = v => ({1:'red',2:'yellow',3:'green',4:'brown',5:'blue',6:'pink',7:'black'}[v]||'');
+  function renderPendingIcons(){
+    const wrap = qs('#pendingIcons'); if(!wrap) return;
+    wrap.innerHTML = '';
+    if(state.pendingFoul || state.pendingBalls.length===0){ wrap.hidden = true; return; }
+    wrap.hidden = false;
+    state.pendingBalls.slice(-60).forEach((v,i)=>{
+      const d=document.createElement('div');
+      d.className = 'miniBall '+ballClass(v);
+      if(state.pendingFreeBall && i===0){ d.style.outline='2px solid #cfe1ff'; d.style.outlineOffset='-1px'; }
+      wrap.appendChild(d);
+    });
+    wrap.scrollLeft = wrap.scrollWidth;
+  }
+
+  const freeBtn = qs('#freeBallBtn');
+  function updateFreeBallUI(){ freeBtn.classList.toggle('armed', !!state.freeBallArmed); }
+  freeBtn.addEventListener('click', ()=>{
+    state.freeBallArmed = !state.freeBallArmed; updateFreeBallUI(); save();
+  });
+
+  function showPending(){
+    qs('#pendingTray').hidden = state.pending<=0;
+    qs('#pendingAmount').textContent = state.pending;
+    qs('#foulBadge').style.display = (state.pendingFoul && state.pending>0) ? 'inline-block' : 'none';
+    updatePendingLabel(); renderPendingIcons();
+  }
+  function addPending(points){
+    if(state.pendingFoul) return;
+    if(state.pending===0){ state.pendingFor = state.selected; }
+    if(state.freeBallArmed && state.pendingBalls.length===0){
+      state.pendingFreeBall = true; state.freeBallArmed = false; updateFreeBallUI();
+    }
+    state.pending += points; state.pendingBalls.push(points); showPending();
+  }
+  function addFoul(points){
+    state.pendingFor = state.selected; state.pendingFoul = true;
+    state.pending = Number(points); state.pendingBalls = []; state.pendingFreeBall = false; showPending();
+  }
+  function clearPending(){
+    state.pending = 0; state.pendingBalls = []; state.pendingFoul = false;
+    state.pendingFreeBall = false; state.pendingFor = state.selected;
+    qs('#pendingAmount').textContent = 0; qs('#pendingTray').hidden = true;
+    qs('#foulBadge').style.display = 'none'; renderPendingIcons();
+  }
+
+  function simulatePendingSequence(){
+    const redsBefore = state.redsLeft;
+    let redsSim = redsBefore;
+    let colorsSim = [...state.colorsRemaining];
+    let afterRed = false; const colorsRemoved = [];
+    const skipIndex = state.pendingFreeBall ? 0 : -1;
+
+    state.pendingBalls.forEach((v,i)=>{
+      if(i===skipIndex) return; // free ball no table change
+      if(v===1){ if(redsSim>0) redsSim--; afterRed = true; }
+      else if(ALL_COLORS.includes(v)){
+        if(afterRed){ afterRed = false; }
+        else if(redsSim===0){
+          const idx = colorsSim.indexOf(v);
+          if(idx!==-1){ colorsSim.splice(idx,1); colorsRemoved.push(v); }
+        }
+      }
+    });
+
+    if(redsBefore>0 && redsSim===0){
+      colorsSim = [...ALL_COLORS];
+      let tempReds = redsBefore, postRed = false;
+      state.pendingBalls.forEach((v,i)=>{
+        if(i===skipIndex) return;
+        if(v===1){ if(tempReds>0){ tempReds--; postRed = true; } return; }
+        if(tempReds>0) return;
+        if(ALL_COLORS.includes(v)){
+          if(postRed){ postRed = false; }
+          else{
+            const idx = colorsSim.indexOf(v);
+            if(idx!==-1){ colorsSim.splice(idx,1); colorsRemoved.push(v); }
+          }
+        }
+      });
+    }
+    return { redsDelta: redsSim - redsBefore, colorsAfter: colorsSim, colorsRemoved };
+  }
+
+  function submitPending(){
+    if(state.pending<=0) return;
+    const sel = state.selected; const p = state.pendingFor;
+    const prevBreak = state.currentBreak[p]; const prevHigh = state.highBreak[p];
+
+    if(state.pendingFoul){
+      state.scores[p] += state.pending;
+      state.history.push({type:'foul',player:p,points:state.pending,prevBreak,prevHigh,endedBreak:true,at:Date.now()});
+      finalizeBreak(sel); clearPending();
+      renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff(); save(); maybeShowWinnerOverlay(); return;
+    }
+
+    const { redsDelta, colorsAfter, colorsRemoved } = simulatePendingSequence();
+    state.scores[p] += state.pending;
+    state.currentBreak[p] += state.pending;
+
+    // NEW: play sound for big visit
+    const thisVisit = state.pending;
+    playBigBreakSfx(p, thisVisit);
+
+    if(state.currentBreak[p] > prevHigh){
+      state.highBreak[p] = state.currentBreak[p];
+      flashHighBreak(p);
+    } else {
+      state.highBreak[p] = Math.max(state.highBreak[p], prevHigh);
+    }
+
+    state.redsLeft = clamp(state.redsLeft + redsDelta, 0, 15);
+    state.colorsRemaining = colorsAfter;
+
+    state.history.push({
+      type:'pots',
+      player:p,
+      amount:state.pending,
+      redsDelta,
+      colorsRemoved,
+      prevBreak,
+      prevHigh,
+      hadFreeBall:!!state.pendingFreeBall,
+      endedBreak:true,
+      at:Date.now()
+    });
+
+    finalizeBreak(sel); clearPending();
+    renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff(); save(); maybeShowWinnerOverlay();
+  }
+
+  const deepClone = o => JSON.parse(JSON.stringify(o));
+  function undo(){
+    const last = state.history.pop(); if(!last) return;
+    state.redoStack.push(deepClone(last));
+    if(last.type==='foul'){
+      const { player, points, prevBreak, prevHigh, endedBreak } = last;
+      state.scores[player] = Math.max(0, state.scores[player] - points);
+      if(endedBreak){ state.currentBreak[state.selected] = prevBreak; state.highBreak[state.selected] = prevHigh; }
+      renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff(); save(); return;
+    }
+    if(last.type==='pots'){
+      const { player, amount, redsDelta=0, colorsRemoved=[], prevBreak, prevHigh, endedBreak } = last;
+      state.scores[player] = Math.max(0, state.scores[player] - amount);
+      state.redsLeft = clamp(state.redsLeft - redsDelta, 0, 15);
+      if(colorsRemoved.length){
+        colorsRemoved.forEach(v=>{ if(!state.colorsRemaining.includes(v)) state.colorsRemaining.push(v); });
+        state.colorsRemaining.sort((a,b)=>a-b);
+      }
+      if(endedBreak){ state.currentBreak[state.selected] = prevBreak; state.highBreak[state.selected] = prevHigh; }
+      else { state.currentBreak[player] = Math.max(0, state.currentBreak[player] - amount); recomputeHighBreaks(); }
+      renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff(); save(); return;
+    }
+  }
+  function redo(){
+    const last = state.redoStack.pop(); if(!last) return;
+    state.history.push(deepClone(last));
+    if(last.type==='foul'){
+      const { player, points, endedBreak } = last;
+      state.scores[player] += points; if(endedBreak) finalizeBreak(state.selected);
+      renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff(); save(); maybeShowWinnerOverlay(); return;
+    }
+    if(last.type==='pots'){
+      const { player, amount, redsDelta=0, colorsRemoved=[], endedBreak } = last;
+      state.scores[player] += amount; state.currentBreak[player] += amount;
+      state.redsLeft = clamp(state.redsLeft + redsDelta, 0, 15);
+      if(colorsRemoved.length){ colorsRemoved.forEach(v=>{ const idx=state.colorsRemaining.indexOf(v); if(idx!==-1) state.colorsRemaining.splice(idx,1); }); }
+      if(endedBreak) finalizeBreak(state.selected);
+      renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff(); save(); maybeShowWinnerOverlay(); return;
+    }
+  }
+
+  function renderBallVisibility(){
+    const redBtn = getBallBtn(1); if(redBtn) redBtn.style.display = state.redsLeft > 0 ? '' : 'none';
+    [2,3,4,5,6,7].forEach(v=>{
+      const btn = getBallBtn(v); if(!btn) return;
+      btn.style.display = state.redsLeft > 0 ? '' : (state.colorsRemaining.includes(v) ? '' : 'none');
+    });
+  }
+
+  function getMinFoul(){
+    if(state.redsLeft > 0) return 4;
+    if(state.colorsRemaining.length === 0) return 4;
+    const lowest = Math.min(...state.colorsRemaining);
+    return Math.max(4, lowest);
+  }
+
+  // ===== Score Difference card logic (single source of truth) =====
+  function updateDiff(){
+    const diff = state.scores[1] - state.scores[2];
+    const lead = Math.abs(diff);
+
+    const leaderName = diff === 0
+      ? '—'
+      : (diff > 0 ? (localStorage.getItem('snookerName1') || 'Player 1')
+                  : (localStorage.getItem('snookerName2') || 'Player 2'));
+
+    const reds = state.redsLeft;
+    const pointsLeft = reds > 0 ? (reds * 8 + 27) : sum(state.colorsRemaining);
+    const minFoul = getMinFoul();
+    const needsSnookers = lead > pointsLeft;
+
+    const diffEl = qs('#scoreDiff');
+    const leaderLabelEl = qs('#leaderLabel');
+    const leaderEl = qs('#leader');
+
+    // Big number: always the lead
+    diffEl.textContent = lead;
+
+    // Frame finished: no points left
+    if (pointsLeft === 0){
+      diffEl.classList.remove('dangerText');
+      if (lead === 0){
+        leaderLabelEl.textContent = '';
+        leaderEl.textContent = 'Re-spot black';
+      } else {
+        leaderLabelEl.textContent = 'Winner:';
+        leaderEl.textContent = leaderName;
+      }
+      return;
+    }
+
+    // In-play states
+    diffEl.classList.toggle('dangerText', needsSnookers);
+
+    if (needsSnookers){
+      const deficit = lead - pointsLeft;
+      const snookersNeeded = Math.max(1, Math.ceil(deficit / minFoul));
+      leaderLabelEl.textContent = '';
+      leaderEl.textContent = `${snookersNeeded} snooker${snookersNeeded>1?'s':''} required (${minFoul}pt)`;
+    } else {
+      leaderLabelEl.textContent = 'Leader:';
+      leaderEl.textContent = leaderName;
+    }
+  }
+
+  // ===== Winner overlay logic =====
+  function onlyBlackRemains(){
+    return state.redsLeft === 0 &&
+           state.colorsRemaining.length === 1 &&
+           state.colorsRemaining[0] === 7;
+  }
+  function frameOver(){ // all balls gone
+    return state.redsLeft === 0 && state.colorsRemaining.length === 0;
+  }
+
+  const overlay = qs('#winnerOverlay');
+
+  function maybeShowWinnerOverlay(){
+    const s1 = state.scores[1], s2 = state.scores[2];
+    const diff = s1 - s2;
+    const lead = Math.abs(diff);
+
+    // Case A: mathematically done before final black (lead >7 with only black on)
+    if (onlyBlackRemains() && lead > 7){
+      const winner = diff > 0 ? (localStorage.getItem('snookerName1')||'Player 1')
+                              : (localStorage.getItem('snookerName2')||'Player 2');
+      showWinnerOverlay(winner, s1, s2);
+      return;
+    }
+
+    // Case B: final black has been potted (frame finished)
+    if (frameOver()){
+      if (lead === 0){
+        // Re-spot black situation – neutral overlay
+        qs('#winName').textContent = 'Re-spot black';
+        qs('#winScores').textContent = `${s1} — ${s2}`;
+        buildConfetti();
+        overlay.style.display = 'flex';
+      } else {
+        const winner = diff > 0 ? (localStorage.getItem('snookerName1')||'Player 1')
+                                : (localStorage.getItem('snookerName2')||'Player 2');
+        showWinnerOverlay(winner, s1, s2);
+      }
+    }
+  }
+
+  function showWinnerOverlay(name, s1, s2){
+    qs('#winName').textContent = name;
+    qs('#winScores').textContent = `${s1} — ${s2}`;
+    buildConfetti();
+    overlay.style.display = 'flex';
+  }
+  function hideWinnerOverlay(){ overlay.style.display = 'none'; qs('#confetti').innerHTML=''; }
+  overlay.addEventListener('click', hideWinnerOverlay);
+
+  function buildConfetti(){
+    const c = qs('#confetti'); c.innerHTML = '';
+    const colors = ['#ffd76a','#ff7aa2','#78a6ff','#7cffc1','#fff176','#cfd8ff'];
+    const pieces = 80; const vw = window.innerWidth;
+    for(let i=0;i<pieces;i++){
+      const d=document.createElement('div');
+      d.className='piece'; d.style.left = Math.random()*vw + 'px';
+      d.style.background = colors[i % colors.length];
+      d.style.animationDuration = (6 + Math.random()*4) + 's';
+      d.style.animationDelay = (Math.random()*1.2) + 's';
+      d.style.opacity = .75 + Math.random()*.25;
+      d.style.transform = `translateY(-10vh) rotate(${Math.random()*360}deg)`;
+      c.appendChild(d);
+    }
+  }
+
+  // ===== Points/Timer/UI =====
+  function updatePointsLeft(){
+    const reds = state.redsLeft;
+    const points = reds>0 ? (reds*8 + 27) : sum(state.colorsRemaining);
+    qs('#pointsLeft').textContent = points;
+    qs('#redsLeft').textContent = state.redsLeft;
+    maybeShowWinnerOverlay(); // auto trigger checks
+  }
+
+  let timerHandle=null;
+  function formatHHMMSS(totalSec){
+    const h=Math.floor(totalSec/3600), m=Math.floor((totalSec%3600)/60), s=totalSec%60;
+    const pad=n=>String(n).padStart(2,'0'); return h>0?`${h}:${pad(m)}:${pad(s)}`:`${pad(m)}:${pad(s)}`;
+  }
+  function updateTimerUI(){
+    const el = document.getElementById('frameTimer'); if(!el||!state.frameStartedAt) return;
+    const secs=Math.max(0, Math.floor((Date.now()-state.frameStartedAt)/1000)); el.textContent = formatHHMMSS(secs);
+  }
+  function startFrameTimer(){ stopFrameTimer(); updateTimerUI(); timerHandle = setInterval(updateTimerUI,1000); }
+  function stopFrameTimer(){ if(timerHandle){ clearInterval(timerHandle); timerHandle=null; } }
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') updateTimerUI(); });
+
+  // ===== Controls & wiring =====
+  qs('#redsMinus').addEventListener('click', ()=>{
+    const was = state.redsLeft;
+    state.redsLeft = clamp(state.redsLeft-1, 0, 15);
+    if(was>0 && state.redsLeft===0) state.colorsRemaining = [2,3,4,5,6,7];
+    if(was===0 && state.redsLeft>0) state.colorsRemaining = [2,3,4,5,6,7];
+    updatePointsLeft(); renderBallVisibility(); updateDiff(); save(); maybeShowWinnerOverlay();
+  });
+  qs('#redsPlus').addEventListener('click', ()=>{
+    const was = state.redsLeft;
+    state.redsLeft = clamp(state.redsLeft+1, 0, 15);
+    if(was===0 && state.redsLeft>0) state.colorsRemaining = [2,3,4,5,6,7];
+    updatePointsLeft(); renderBallVisibility(); updateDiff(); save();
+  });
+
+  function updateFsLabel(){
+    const inFs = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+    qs('#fsBtn').textContent = inFs ? '🗗 Exit Fullscreen' : '⛶ Fullscreen';
+  }
+  document.addEventListener('fullscreenchange', updateFsLabel);
+  document.addEventListener('webkitfullscreenchange', updateFsLabel);
+  document.addEventListener('msfullscreenchange', updateFsLabel);
+  qs('#fsBtn').addEventListener('click', ()=>{
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) { exit && exit.call(document); }
+    else { req && req.call(el); }
+  });
+
+  qsa('.ball').forEach(btn=>btn.addEventListener('click', ()=>addPending(Number(btn.dataset.points))));
+  qsa('.foulBtn').forEach(btn=>btn.addEventListener('click', ()=>addFoul(Number(btn.dataset.foul))));
+  qs('#submitBtn').addEventListener('click', submitPending);
+  qs('#clearPending').addEventListener('click', clearPending);
+  qs('#undoBtn').addEventListener('click', undo);
+  qs('#redoBtn').addEventListener('click', redo);
+  qs('#p1').addEventListener('click', e=>{ if(!e.target.classList.contains('name')) selectPlayer(1); });
+  qs('#p2').addEventListener('click', e=>{ if(!e.target.classList.contains('name')) selectPlayer(2); });
+
+  // Results button -> /results.html (works local and on Pages)
+  document.getElementById('resultsBtn').addEventListener('click', () => {
+    try {
+      const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+      const target = base + 'results.html';
+      window.location.href = target;
+    } catch (e) { console.error('Navigation to results.html failed:', e); }
+  });
+
+  // Logging
+  function getLogs(){ try{return JSON.parse(localStorage.getItem('snookerLogs')||'[]')}catch(_){return[]} }
+  function setLogs(arr){ try{localStorage.setItem('snookerLogs', JSON.stringify(arr))}catch(_){} }
+  function countFoulsAwarded(){
+    const f1 = state.history.filter(h=>h.type==='foul' && h.player===1).length;
+    const f2 = state.history.filter(h=>h.type==='foul' && h.player===2).length;
+    return {f1,f2};
+  }
+  function buildFrameRecord(){
+    const p1 = (localStorage.getItem('snookerName1')||'Player 1').trim() || 'Player 1';
+    const p2 = (localStorage.getItem('snookerName2')||'Player 2').trim() || 'Player 2';
+    const s1 = state.scores[1], s2 = state.scores[2];
+    const winner = s1===s2 ? 'Tie' : (s1>s2 ? p1 : p2);
+    const margin = Math.abs(s1 - s2);
+    const { f1, f2 } = countFoulsAwarded();
+    return {
+      id: new Date().toISOString(),
+      startedAt: new Date(state.frameStartedAt).toISOString(),
+      endedAt: new Date().toISOString(),
+      durationSec: Math.round((Date.now()-state.frameStartedAt)/1000),
+      p1: { name: p1, score: s1, highBreak: state.highBreak[1], foulsFor: f1 },
+      p2: { name: p2, score: s2, highBreak: state.highBreak[2], foulsFor: f2 },
+      winner, margin,
+      redsLeft: state.redsLeft,
+      colorsRemaining: [...state.colorsRemaining],
+      notes: ""
+    };
+  }
+  function openLogModal(){
+    const rec = buildFrameRecord();
+    const sum = `${rec.p1.name} ${rec.p1.score} (HiB ${rec.p1.highBreak})  —  ${rec.p2.name} ${rec.p2.score} (HiB ${rec.p2.highBreak})\n`+
+                `Winner: ${rec.winner}${rec.winner!=='Tie' ? `  |  Margin: ${rec.margin}`:""}\n`+
+                `Fouls awarded: ${rec.p1.name} ${rec.p1.foulsFor}, ${rec.p2.name} ${rec.p2.foulsFor}\n`+
+                `Reds left: ${rec.redsLeft} | Colours: ${rec.colorsRemaining?.join(', ')||'—'}\n`+
+                `Duration: ${rec.durationSec}s`;
+    qs('#logSummary').textContent = sum;
+    qs('#logModal').style.display = 'flex';
+  }
+  function closeLogModal(){ qs('#logModal').style.display = 'none'; }
+  qs('#endFrameBtn').addEventListener('click', openLogModal);
+  qs('#cancelLog').addEventListener('click', closeLogModal);
+  qs('#confirmLog').addEventListener('click', ()=>{
+    const logs = getLogs(); logs.push(buildFrameRecord()); setLogs(logs);
+    closeLogModal(); softResetFrame();
+  });
+
+  // New Game modal
+  const confirmModal = document.getElementById('confirmModal');
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    confirmModal.style.display = 'flex';
+  });
+  document.getElementById('cancelReset').addEventListener('click', () => {
+    confirmModal.style.display = 'none';
+  });
+  document.getElementById('confirmReset').addEventListener('click', () => {
+    confirmModal.style.display = 'none';
+    softResetFrame();
+  });
+
+  function softResetFrame(){
+    Object.assign(state, {
+      selected: 1, scores:{1:0,2:0}, currentBreak:{1:0,2:0}, highBreak:{1:0,2:0},
+      pending:0, pendingBalls:[], pendingFor:1, pendingFoul:false, pendingFreeBall:false, freeBallArmed:false,
+      redsLeft:15, colorsRemaining:[...ALL_COLORS], history:[], redoStack:[], frameStartedAt:Date.now()
+    });
+    clearPending(); updateFreeBallUI(); selectPlayer(1);
+    renderScores(); updateDiff(); updatePointsLeft(); renderBallVisibility(); save(); startFrameTimer();
+  }
+
+  // Init
+  selectPlayer(state.selected);
+  renderScores(); updatePointsLeft(); renderBallVisibility(); updateDiff(); updateFreeBallUI(); startFrameTimer(); updateFsLabel();
+})();
+</script>
+
+<script>
+// Wake Lock & orientation after user input
+let wakeLock;
+async function requestWakeLock(){ try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener?.('release', ()=>{wakeLock=null}); } }catch(e){} }
+function tryLockOrientation(){ try{ if(screen.orientation && screen.orientation.lock){ screen.orientation.lock('landscape').catch(()=>{}); } }catch(e){} }
+window.addEventListener('pointerdown', ()=>{ requestWakeLock(); tryLockOrientation(); }, { once:true });
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !wakeLock) requestWakeLock(); });
+</script>
+
+</body>
+</html>
