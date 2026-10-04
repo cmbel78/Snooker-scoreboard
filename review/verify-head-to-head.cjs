@@ -1,0 +1,14 @@
+const fs=require('fs'),http=require('http'),assert=require('assert');
+const {chromium}=require('C:/Users/cmbel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const server=http.createServer((req,res)=>{const f=req.url==='/'?'index.html':req.url.slice(1);if(!fs.existsSync(f)){res.writeHead(404).end();return;}res.setHeader('Content-Type',f.endsWith('.html')?'text/html':'application/octet-stream');res.end(fs.readFileSync(f));});
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true,channel:'msedge'});const page=await browser.newPage({viewport:{width:1366,height:1000}});const root='http://127.0.0.1:'+server.address().port;await page.goto(root);
+const logs=Array.from({length:7},(_,i)=>({id:new Date(Date.UTC(2026,9,i+1)).toISOString(),endedAt:new Date(Date.UTC(2026,9,i+1)).toISOString(),p1:{name:i%2?'Ronnie':'Craig',score:i%2?40:70},p2:{name:i%2?'Craig':'Ronnie',score:i%2?80:55}}));logs[6].p1.score=55;
+logs.push({...logs[0],p2:{name:'Other',score:90},endedAt:'2026-10-09T00:00:00Z'});
+await page.evaluate(logs=>{localStorage.setItem('snookerName1','Craig');localStorage.setItem('snookerName2','Ronnie');localStorage.setItem('snookerLogs',JSON.stringify(logs));localStorage.setItem('snookerVisualTheme','club');},logs);await page.reload();
+assert.equal(await page.locator('.h2hGame').count(),5);assert.equal(await page.locator('.h2hSummary').textContent(),'Craig 4 – 0 Ronnie · 1 drawn');assert.equal(await page.locator('.h2hGame strong').first().textContent(),'55 – 55');
+const stored=await page.evaluate(()=>localStorage.getItem('snookerLogs'));assert.equal(stored,JSON.stringify(logs));
+await page.screenshot({path:'review/club-head-to-head.png',fullPage:true});await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:'review/club-head-to-head-phone.png',fullPage:true});
+await page.locator('.name[data-player="2"]').fill('Other');await page.locator('.name[data-player="2"]').blur();assert.equal(await page.locator('.h2hGame').count(),1);
+await page.locator('.name[data-player="2"]').fill('Nobody');await page.locator('.name[data-player="2"]').blur();assert(await page.locator('.h2hEmpty').isVisible());
+await page.evaluate(()=>localStorage.setItem('snookerLogs','bad JSON'));await page.reload();assert(await page.locator('.h2hEmpty').isVisible());
+console.log('Head-to-head: newest five, reversed players, ties, unrelated players, live name edits, read-only logs, malformed logs and phone width passed.');await browser.close();server.close();})().catch(e=>{console.error(e);server.close();process.exit(1)});
