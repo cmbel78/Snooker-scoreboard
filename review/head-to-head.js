@@ -9,8 +9,8 @@
     const games = names[0] !== names[1] ? logs.filter(r => r && r.p1 && r.p2 &&
       ((r.p1.name === names[0] && r.p2.name === names[1]) || (r.p1.name === names[1] && r.p2.name === names[0])))
       .sort((a, b) => (Date.parse(b.endedAt || b.id) || 0) - (Date.parse(a.endedAt || a.id) || 0)).slice(0, 5) : [];
-    const heading = document.createElement('div'); heading.className = 'h2hHeader';
-    const title = document.createElement('h3'); title.textContent = 'Head to head · Last 5 frames'; heading.append(title);
+    const heading = document.createElement('summary'); heading.className = 'h2hHeader';
+    const title = document.createElement('span'); title.className = 'h2hTitle'; title.textContent = 'Head to head · Last 5 frames'; heading.append(title);
     const wins = [0, 0]; let ties = 0;
     const cards = document.createElement('div'); cards.className = 'h2hGames';
     games.forEach(r => {
@@ -25,7 +25,7 @@
       date.textContent = Number.isNaN(when.getTime()) ? 'Logged frame' : when.toLocaleDateString([], {day:'numeric',month:'short'});
       card.append(score, won, date); cards.append(card);
     });
-    const summary = document.createElement('div'); summary.className = 'h2hSummary';
+    const summary = document.createElement('span'); summary.className = 'h2hSummary';
     summary.textContent = games.length ? names[0] + ' ' + wins[0] + ' – ' + wins[1] + ' ' + names[1] + (ties ? ' · ' + ties + ' drawn' : '') : names.join(' vs ');
     heading.append(summary); panel.replaceChildren(heading);
     if (games.length) panel.append(cards);

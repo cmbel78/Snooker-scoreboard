@@ -2,6 +2,12 @@
 
 Branch: `codex/visual-themes`. No merge or deployment performed.
 
+## Follow-up: compact Broadcast and collapsible head-to-head
+
+Prepared on `codex/compact-broadcast` after the original themes were published. Broadcast now uses a CSS grid placing score left, editable name right and high break beneath the name. Other skins retain their player layouts. Head-to-head uses a native details/summary accordion, collapsed initially, with aggregate wins visible in the summary. Its open state survives read-only content refreshes in the current page and resets on reload; no new storage is used.
+
+The tablet test verifies name placement and ball/Submit visibility at 1024 × 768, with screenshots of collapsed and expanded stats. Enter/Space toggle the accordion. Broadcast ball sizes can shrink within their grid cells to prevent tablet overflow. Existing scoring and results scripts remain identical to deployed main; the control comparison suite still passes. Preview images use synthetic results. This follow-up has not been merged or deployed.
+
 ## Revised visual direction and head-to-head panel
 
 Non-Classic skins now use CSS resin-ball highlights, spherical shading and cast shadows. Club adds illuminated, textured baize and a recessed ball tray; Broadcast uses blue lighting and a diagonal background. OLED retains black. No image downloads, frameworks or new runtime asset requests are needed.
