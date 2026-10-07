@@ -264,6 +264,44 @@ html[data-theme="broadcast"] .submit {min-width:0;}
 @media(max-width:600px){html[data-theme="broadcast"] .ballRow{grid-template-columns:repeat(4,minmax(0,1fr));}html[data-theme="broadcast"] .player{column-gap:12px;padding:12px;}html[data-theme="broadcast"] .player .score{font-size:44px;padding:4px;}html[data-theme="broadcast"] .player.selected .score{padding:4px;}html[data-theme="broadcast"] .player .meta{font-size:11px;}}
 @media(max-width:1100px){html[data-theme]:not([data-theme="classic"]) .bottom{padding:16px 8px;}}
 @media(max-width:600px){.h2hGames{grid-template-columns:repeat(2,minmax(0,1fr));}.h2hGame:last-child{grid-column:1/-1;}html[data-theme]:not([data-theme="classic"]) .bottom{margin:0 14px 14px;}.headToHead{padding:14px;}}
+/* Broadcast density follows available viewport height, including scaled tablets. */
+html[data-theme="broadcast"] #app {height:100dvh;}
+html[data-theme="broadcast"] .players {padding:8px 12px;gap:10px;}
+html[data-theme="broadcast"] .player {padding:8px 14px;column-gap:16px;}
+html[data-theme="broadcast"] .player .score {font-size:clamp(40px,7dvh,64px);}
+html[data-theme="broadcast"] .player .name {font-size:clamp(18px,2vw,24px);}
+html[data-theme="broadcast"] .player .meta {padding-top:3px;font-size:12px;}
+html[data-theme="broadcast"] .appearance {margin-bottom:0;}
+html[data-theme="broadcast"] .appearance summary {padding:8px 12px;}
+html[data-theme="broadcast"] .middle {gap:10px;padding:4px 12px;}
+html[data-theme="broadcast"] .btnCol,html[data-theme="broadcast"] .btnRow {gap:6px;}
+html[data-theme="broadcast"] :is(.undoBtn,.redoBtn,.resetBtn,.logBtn,.resultsBtn) {padding:8px 12px;min-height:44px;font-size:14px;}
+html[data-theme="broadcast"] .foulRow {gap:8px;}
+html[data-theme="broadcast"] .freeBallBtn {min-height:44px;padding:8px 12px;font-size:13px;}
+html[data-theme="broadcast"] .statCard {padding:8px;}
+html[data-theme="broadcast"] .statCard .big {font-size:clamp(24px,4dvh,34px);}
+html[data-theme="broadcast"] .pending {padding:4px 10px;gap:8px;}
+html[data-theme="broadcast"] .headToHead {margin:6px 12px 8px;padding:0 12px;}
+html[data-theme="broadcast"] .headToHead[open] {padding-bottom:8px;}
+html[data-theme="broadcast"] .h2hGames {gap:6px;margin-top:4px;}
+html[data-theme="broadcast"] .h2hGame {padding:6px;}
+html[data-theme="broadcast"] .h2hGame strong {font-size:20px;}
+html[data-theme="broadcast"] .bottom {padding:10px 8px;margin: auto 12px 8px;}
+html[data-theme="broadcast"] .ballRow {gap:8px;}
+html[data-theme="broadcast"] .ball {width:min(100%,clamp(48px,15dvh,112px));font-size:20px;}
+html[data-theme="broadcast"] .submit {padding:12px 6px;min-height:44px;font-size:14px;}
+@media(min-width:601px) and (max-height:600px){
+html[data-theme="broadcast"] .players{padding:6px 12px;}
+html[data-theme="broadcast"] .player{padding:6px 12px;}
+html[data-theme="broadcast"] .player .score{font-size:40px;}
+html[data-theme="broadcast"] .middle{grid-template-columns:minmax(0,1fr) minmax(0,2.2fr) minmax(0,1fr);gap:6px;padding:2px 12px;}
+html[data-theme="broadcast"] :is(.undoBtn,.redoBtn,.resetBtn,.logBtn,.resultsBtn){padding:6px 8px;font-size:12px;}
+html[data-theme="broadcast"] .statCard .chip{font-size:12px;padding:4px 6px;}
+html[data-theme="broadcast"] .h2hGame{padding:4px;}
+html[data-theme="broadcast"] .h2hGame span{margin-top:2px;font-size:11px;}
+html[data-theme="broadcast"] .bottom{padding:8px;}
+html[data-theme="broadcast"] .ball{width:min(100%,64px);}
+}
 
 </style>
 </head>
