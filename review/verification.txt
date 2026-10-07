@@ -1,5 +1,2 @@
-classic: all exercised controls and stored state match baseline
-broadcast: all exercised controls and stored state match baseline
-oled: all exercised controls and stored state match baseline
-club: all exercised controls and stored state match baseline
+copper: all exercised controls and stored state match baseline
 Existing baseline errors: ["match is not defined"]

@@ -199,7 +199,7 @@ html[data-theme]:not([data-theme="classic"]) .btn.danger { background:#2a1010; b
 // Independent preference only: never reads or writes scoreboard state or logs.
 (() => {
   const key = 'snookerVisualTheme';
-  const themes = ['classic', 'broadcast', 'oled', 'club'];
+  const themes = ['classic', 'broadcast', 'oled', 'club', 'copper'];
   let theme = 'classic';
   try { const stored = localStorage.getItem(key); if (themes.includes(stored)) theme = stored; } catch (_) {}
   document.documentElement.dataset.theme = theme;
@@ -332,53 +332,53 @@ html[data-theme="classic"] .ball{width:min(100%,64px);}
 @media(max-width:600px){html[data-theme="classic"] .ballRow{grid-template-columns:repeat(4,minmax(0,1fr));}}
 
 /* OLED and Club share the proven Broadcast layout dimensions. */
-html:is([data-theme="oled"],[data-theme="club"]) .players {gap:12px;padding:12px 14px;}
-html:is([data-theme="oled"],[data-theme="club"]) .player {display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:24px;align-items:center;min-height:0;padding:14px 20px;}
-html:is([data-theme="oled"],[data-theme="club"]) .player .score {grid-column:1;grid-row:1/3;font-size:clamp(48px,7vw,76px);margin:0;padding:4px 10px;border-radius:4px;}
-html:is([data-theme="oled"],[data-theme="club"]) .player.selected .score {outline:2px solid var(--outline);outline-offset:2px;padding:4px 10px;}
-html:is([data-theme="oled"],[data-theme="club"]) .player .name {grid-column:2;grid-row:1;font-size:clamp(18px,2.5vw,26px);align-self:end;overflow-wrap:anywhere;min-width:0;}
-html:is([data-theme="oled"],[data-theme="club"]) .player .meta {grid-column:2;grid-row:2;align-self:start;padding-top:6px;font-size:13px;}
-html:is([data-theme="oled"],[data-theme="club"]) .ballRow {grid-template-columns:repeat(8,minmax(0,1fr));}
-html:is([data-theme="oled"],[data-theme="club"]) .ball {width:min(var(--btnSize),100%);height:auto;aspect-ratio:1;}
-html:is([data-theme="oled"],[data-theme="club"]) .submit {min-width:0;}
-@media(max-width:600px){html:is([data-theme="oled"],[data-theme="club"]) .ballRow{grid-template-columns:repeat(4,minmax(0,1fr));}html:is([data-theme="oled"],[data-theme="club"]) .player{column-gap:12px;padding:12px;}html:is([data-theme="oled"],[data-theme="club"]) .player .score{font-size:44px;padding:4px;}html:is([data-theme="oled"],[data-theme="club"]) .player.selected .score{padding:4px;}html:is([data-theme="oled"],[data-theme="club"]) .player .meta{font-size:11px;}}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .players {gap:12px;padding:12px 14px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player {display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:24px;align-items:center;min-height:0;padding:14px 20px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player .score {grid-column:1;grid-row:1/3;font-size:clamp(48px,7vw,76px);margin:0;padding:4px 10px;border-radius:4px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player.selected .score {outline:2px solid var(--outline);outline-offset:2px;padding:4px 10px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player .name {grid-column:2;grid-row:1;font-size:clamp(18px,2.5vw,26px);align-self:end;overflow-wrap:anywhere;min-width:0;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player .meta {grid-column:2;grid-row:2;align-self:start;padding-top:6px;font-size:13px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .ballRow {grid-template-columns:repeat(8,minmax(0,1fr));}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .ball {width:min(var(--btnSize),100%);height:auto;aspect-ratio:1;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .submit {min-width:0;}
+@media(max-width:600px){html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .ballRow{grid-template-columns:repeat(4,minmax(0,1fr));}html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player{column-gap:12px;padding:12px;}html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player .score{font-size:44px;padding:4px;}html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player.selected .score{padding:4px;}html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player .meta{font-size:11px;}}
 /* Broadcast density follows available viewport height, including scaled tablets. */
-html:is([data-theme="oled"],[data-theme="club"]) #app {height:100dvh;}
-html:is([data-theme="oled"],[data-theme="club"]) .players {padding:8px 12px;gap:10px;}
-html:is([data-theme="oled"],[data-theme="club"]) .player {padding:8px 14px;column-gap:16px;}
-html:is([data-theme="oled"],[data-theme="club"]) .player .score {font-size:clamp(40px,7dvh,64px);}
-html:is([data-theme="oled"],[data-theme="club"]) .player .name {font-size:clamp(18px,2vw,24px);}
-html:is([data-theme="oled"],[data-theme="club"]) .player .meta {padding-top:3px;font-size:12px;}
-html:is([data-theme="oled"],[data-theme="club"]) .appearance {margin-bottom:0;}
-html:is([data-theme="oled"],[data-theme="club"]) .appearance summary {padding:8px 12px;}
-html:is([data-theme="oled"],[data-theme="club"]) .middle {gap:10px;padding:4px 12px;}
-html:is([data-theme="oled"],[data-theme="club"]) .btnCol,html:is([data-theme="oled"],[data-theme="club"]) .btnRow {gap:6px;}
-html:is([data-theme="oled"],[data-theme="club"]) :is(.undoBtn,.redoBtn,.resetBtn,.logBtn,.resultsBtn) {padding:8px 12px;min-height:44px;font-size:14px;}
-html:is([data-theme="oled"],[data-theme="club"]) .foulRow {gap:8px;}
-html:is([data-theme="oled"],[data-theme="club"]) .freeBallBtn {min-height:44px;padding:8px 12px;font-size:13px;}
-html:is([data-theme="oled"],[data-theme="club"]) .statCard {padding:8px;}
-html:is([data-theme="oled"],[data-theme="club"]) .statCard .big {font-size:clamp(24px,4dvh,34px);}
-html:is([data-theme="oled"],[data-theme="club"]) .pending {padding:4px 10px;gap:8px;}
-html:is([data-theme="oled"],[data-theme="club"]) .headToHead {margin:6px 12px 8px;padding:0 12px;}
-html:is([data-theme="oled"],[data-theme="club"]) .headToHead[open] {padding-bottom:8px;}
-html:is([data-theme="oled"],[data-theme="club"]) .h2hGames {gap:6px;margin-top:4px;}
-html:is([data-theme="oled"],[data-theme="club"]) .h2hGame {padding:6px;}
-html:is([data-theme="oled"],[data-theme="club"]) .h2hGame strong {font-size:20px;}
-html:is([data-theme="oled"],[data-theme="club"]) .bottom {padding:10px 8px;margin: auto 12px 8px;}
-html:is([data-theme="oled"],[data-theme="club"]) .ballRow {gap:8px;}
-html:is([data-theme="oled"],[data-theme="club"]) .ball {width:min(100%,clamp(48px,15dvh,112px));font-size:20px;}
-html:is([data-theme="oled"],[data-theme="club"]) .submit {padding:12px 6px;min-height:44px;font-size:14px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) #app {height:100dvh;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .players {padding:8px 12px;gap:10px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player {padding:8px 14px;column-gap:16px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player .score {font-size:clamp(40px,7dvh,64px);}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player .name {font-size:clamp(18px,2vw,24px);}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player .meta {padding-top:3px;font-size:12px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .appearance {margin-bottom:0;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .appearance summary {padding:8px 12px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .middle {gap:10px;padding:4px 12px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .btnCol,html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .btnRow {gap:6px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) :is(.undoBtn,.redoBtn,.resetBtn,.logBtn,.resultsBtn) {padding:8px 12px;min-height:44px;font-size:14px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .foulRow {gap:8px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .freeBallBtn {min-height:44px;padding:8px 12px;font-size:13px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .statCard {padding:8px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .statCard .big {font-size:clamp(24px,4dvh,34px);}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .pending {padding:4px 10px;gap:8px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .headToHead {margin:6px 12px 8px;padding:0 12px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .headToHead[open] {padding-bottom:8px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .h2hGames {gap:6px;margin-top:4px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .h2hGame {padding:6px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .h2hGame strong {font-size:20px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .bottom {padding:10px 8px;margin: auto 12px 8px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .ballRow {gap:8px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .ball {width:min(100%,clamp(48px,15dvh,112px));font-size:20px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .submit {padding:12px 6px;min-height:44px;font-size:14px;}
 @media(min-width:601px) and (max-height:600px){
-html:is([data-theme="oled"],[data-theme="club"]) .players{padding:6px 12px;}
-html:is([data-theme="oled"],[data-theme="club"]) .player{padding:6px 12px;}
-html:is([data-theme="oled"],[data-theme="club"]) .player .score{font-size:40px;}
-html:is([data-theme="oled"],[data-theme="club"]) .middle{grid-template-columns:minmax(0,1fr) minmax(0,2.2fr) minmax(0,1fr);gap:6px;padding:2px 12px;}
-html:is([data-theme="oled"],[data-theme="club"]) :is(.undoBtn,.redoBtn,.resetBtn,.logBtn,.resultsBtn){padding:6px 8px;font-size:12px;}
-html:is([data-theme="oled"],[data-theme="club"]) .statCard .chip{font-size:12px;padding:4px 6px;}
-html:is([data-theme="oled"],[data-theme="club"]) .h2hGame{padding:4px;}
-html:is([data-theme="oled"],[data-theme="club"]) .h2hGame span{margin-top:2px;font-size:11px;}
-html:is([data-theme="oled"],[data-theme="club"]) .bottom{padding:4px;}
-html:is([data-theme="oled"],[data-theme="club"]) .ball{width:min(100%,56px);}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .players{padding:6px 12px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player{padding:6px 12px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .player .score{font-size:40px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .middle{grid-template-columns:minmax(0,1fr) minmax(0,2.2fr) minmax(0,1fr);gap:6px;padding:2px 12px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) :is(.undoBtn,.redoBtn,.resetBtn,.logBtn,.resultsBtn){padding:6px 8px;font-size:12px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .statCard .chip{font-size:12px;padding:4px 6px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .h2hGame{padding:4px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .h2hGame span{margin-top:2px;font-size:11px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .bottom{padding:4px;}
+html:is([data-theme="oled"],[data-theme="club"],[data-theme="copper"]) .ball{width:min(100%,56px);}
 }
 
 /* Tablet skin sizing: Classic uses the space saved by hiding head-to-head. */
@@ -390,6 +390,36 @@ html[data-theme="classic"] .ball {position:relative;isolation:isolate;width:min(
 html[data-theme="classic"] .ball::after {content:"";position:absolute;inset:8% 16% 57% 16%;border-top:2px solid #ffffff42;border-radius:50%;transform:rotate(-28deg);pointer-events:none;}
 html[data-theme="classic"] :is(.ball.yellow,.ball.pink){color:#111;text-shadow:none;}
 html[data-theme="classic"] .ball.black{background-color:#10151b;border-color:#77838e;}
+
+/* COPPER: an ivory tournament desk, warm metal accents and ink-black scores. */
+html[data-theme="copper"] {
+ --bg:#e9e3d7;--fg:#252b2c;--muted:#626762;--panel:#fffcf3;--panel2:#f6f0e3;--outline:#a64d27;--primary:#264c48;--accent:#a64d27;--skin-border:#c9bfaa;--skin-button:#f7f2e7;--skin-radius:12px;--skin-shadow:0 5px 16px #3d322410;--gold:#a64d27;--winGrad1:#ece0c8;--winGrad2:#fffcf3;
+}
+html[data-theme="copper"] body {background:radial-gradient(ellipse at 0 0,#fffdf5 0,transparent 65%),repeating-linear-gradient(90deg,#72573104 0 1px,transparent 1px 6px),#e9e3d7;background-attachment:fixed;}
+html[data-theme="copper"] .player {background:linear-gradient(120deg,#fffdf5,#f5eddc);border:1px solid #c9bfaa;border-bottom:3px solid #c9bfaa;box-shadow:0 5px 16px #3d322410;}
+html[data-theme="copper"] .player.selected {background:linear-gradient(110deg,#f9e8d5,#fffdf5 75%);border-color:#ab5833;border-bottom:3px solid #ab5833;}
+html[data-theme="copper"] .player .score {font-family:Georgia,'Times New Roman',serif;font-weight:700;letter-spacing:-.06em;color:#283c39;}
+html[data-theme="copper"] .player.selected .score {outline:none;border-right:2px solid #ab5833;border-radius:0;color:#a64d27;}
+html[data-theme="copper"] .player .name {letter-spacing:.04em;font-weight:800;text-transform:uppercase;font-size:20px;}
+html[data-theme="copper"] .player .meta {color:#6a6a5f;}
+html[data-theme="copper"] .statCard h3 {text-transform:uppercase;letter-spacing:.12em;font-size:11px;}
+html[data-theme="copper"] .statCard .big {font-family:Georgia,'Times New Roman',serif;}
+html[data-theme="copper"] .headToHead {background:#fffcf3;border-color:#c9bfaa;border-radius:12px;box-shadow:0 5px 16px #3d322410;}
+html[data-theme="copper"] .h2hGame {background:#eee6d6;border-color:#d9cfbc;}
+html[data-theme="copper"] .h2hGame strong {font-family:Georgia,'Times New Roman',serif;color:#294d47;}
+html[data-theme="copper"] .bottom {background:linear-gradient(135deg,#284b44,#152e29);border:1px solid #47685d;border-top:3px solid #b17b4e;border-radius:16px;box-shadow:0 10px 24px #25322730;}
+html[data-theme="copper"] .ball {border-color:#ffffff60;box-shadow:inset -9px -13px 20px #0007,inset 3px 4px 12px #ffffff36,0 8px 12px #0006;}
+html[data-theme="copper"] .submit {background:linear-gradient(#d7a476,#b77e4c);color:#231c13;border:1px solid #e1b18b;font-weight:900;}
+html[data-theme="copper"] .foulBtn {background:#fffcf3;border-color:#bdb49f;color:#252b2c;}
+html[data-theme="copper"] .freeBallBtn {color:#264c48;border-color:#264c48;background:#e0ebe1;}
+html[data-theme="copper"] .freeBallBtn.armed {background:#c3dac9;box-shadow:0 0 0 4px #264c4822;}
+html[data-theme="copper"] .overlayInner {color:var(--fg);text-shadow:none;}
+html[data-theme="copper"] .overlayBadge {border-color:#a64d27;background:#a64d2710;}
+html[data-theme="copper"] .miniBall {border-color:#ad9e84;}
+html[data-theme="copper"] .btn.danger {color:#fff;}
+html[data-theme="copper"] #app .submit {background:linear-gradient(#d7a476,#b77e4c);color:#231c13;border:1px solid #e1b18b;}
+html[data-theme="copper"] #app .freeBallBtn {color:#264c48;border-color:#264c48;background:#e0ebe1;}
+html[data-theme="copper"] #app .freeBallBtn.armed {background:#c3dac9;box-shadow:0 0 0 4px #264c4822;}
 
 </style>
 </head>
@@ -421,7 +451,7 @@ html[data-theme="classic"] .ball.black{background-color:#10151b;border-color:#77
     </div>
   </div>
 
-  <details class="appearance"><summary>Appearance</summary><label for="visualTheme">Theme <select id="visualTheme"><option value="classic">CLASSIC</option><option value="broadcast">BROADCAST</option><option value="oled">OLED</option><option value="club">CLUB</option></select></label></details>
+  <details class="appearance"><summary>Appearance</summary><label for="visualTheme">Theme <select id="visualTheme"><option value="classic">CLASSIC</option><option value="broadcast">BROADCAST</option><option value="oled">OLED</option><option value="club">CLUB</option><option value="copper">COPPER</option></select></label></details>
 
   <div class="middle">
     <div class="statCard compact">
