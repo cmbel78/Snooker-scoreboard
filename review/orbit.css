@@ -36,5 +36,5 @@ html[data-theme="orbit"] .bottom {grid-area:rack;display:flex;align-items:center
 html[data-theme="orbit"] .ballRow {display:grid;grid-template-columns:1fr 1fr;gap:14px 8px;width:100%;}
 html[data-theme="orbit"] .ball {width:min(100%,14dvh);height:auto;aspect-ratio:1;font-size:20px;}
 html[data-theme="orbit"] #app .submit {grid-column:2;grid-row:4;align-self:center;padding:10px 4px;min-height:44px;font-size:13px;background:#f8b94f;color:#24172b;border:1px solid #ffe0a0;}
-html[data-theme="orbit"] .appearance {position:absolute;right:18px;top:14px;margin:0;}
+html[data-theme="orbit"] #app .appearance {position:absolute;right:18px;top:14px;margin:0;}
 @media(max-height:600px){html[data-theme="orbit"] .middle{gap:6px;}html[data-theme="orbit"] .btnCol{gap:6px;}html[data-theme="orbit"] .ballRow{gap:8px;}html[data-theme="orbit"] .player{padding:12px;}}
