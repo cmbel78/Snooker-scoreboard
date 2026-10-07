@@ -105,7 +105,7 @@ html[data-theme]:not([data-theme="classic"]) .btn.danger { background:#2a1010; b
 // Independent preference only: never reads or writes scoreboard state or logs.
 (() => {
   const key = 'snookerVisualTheme';
-  const themes = ['classic', 'broadcast', 'oled', 'club', 'copper'];
+  const themes = ['classic', 'broadcast', 'oled', 'club', 'copper', 'orbit'];
   let theme = 'classic';
   try { const stored = localStorage.getItem(key); if (themes.includes(stored)) theme = stored; } catch (_) {}
   document.documentElement.dataset.theme = theme;
@@ -327,10 +327,51 @@ html[data-theme="copper"] #app .submit {background:linear-gradient(#d7a476,#b77e
 html[data-theme="copper"] #app .freeBallBtn {color:#264c48;border-color:#264c48;background:#e0ebe1;}
 html[data-theme="copper"] #app .freeBallBtn.armed {background:#c3dac9;box-shadow:0 0 0 4px #264c4822;}
 
+/* ORBIT: tablet cockpit, player tower / control deck / vertical ball rack. */
+html[data-theme="orbit"] {--bg:#12101e;--fg:#f3efff;--muted:#b6aaca;--panel:#211c32;--panel2:#171426;--outline:#f8b94f;--primary:#6748ad;--accent:#f8b94f;--skin-border:#49365f;--skin-button:#2d2342;--skin-radius:8px;--skin-shadow:0 8px 24px #0004;--gold:#f8b94f;--winGrad1:#231439;--winGrad2:#12101e;}
+html[data-theme="orbit"] body {background:radial-gradient(ellipse at 60% 0,#57357755,transparent 70%),repeating-linear-gradient(0deg,#ffffff03 0 1px,transparent 1px 30px),#12101e;}
+html[data-theme="orbit"] #app {position:relative;display:grid;grid-template-columns:minmax(200px,1fr) minmax(360px,1.8fr) minmax(180px,.9fr);grid-template-rows:1fr auto auto;grid-template-areas:'players middle rack' 'players pending rack' 'players stats rack';height:100dvh;max-width:none;padding:12px;gap:10px;}
+html[data-theme="orbit"] .players {grid-area:players;display:grid;grid-template-columns:1fr;grid-template-rows:1fr 1fr;padding:0;gap:10px;min-height:0;}
+html[data-theme="orbit"] .player {display:flex;flex-direction:column;justify-content:center;min-height:0;padding:18px;border:1px solid #56416e;border-left:5px solid #56416e;border-radius:8px;background:linear-gradient(135deg,#30213d,#191526);}
+html[data-theme="orbit"] .player.selected {border-left-color:#f8b94f;background:linear-gradient(135deg,#493144,#21182d);box-shadow:inset 0 0 35px #f8b94f09;}
+html[data-theme="orbit"] .player .name {order:0;font-size:clamp(20px,2.3vw,30px);letter-spacing:.04em;overflow-wrap:anywhere;}
+html[data-theme="orbit"] .player .score {order:1;outline:none!important;padding:0;margin:10px 0;font-size:clamp(64px,14dvh,140px);font-weight:800;line-height:1;color:#d9cbea;font-variant-numeric:tabular-nums;}
+html[data-theme="orbit"] .player.selected .score {color:#f8b94f;}
+html[data-theme="orbit"] .player .meta {order:2;font-size:12px;}
+html[data-theme="orbit"] .middle {grid-area:middle;display:grid;grid-template-columns:1fr 1fr;align-content:center;align-items:stretch;gap:10px;padding:34px 0 0;min-height:0;}
+html[data-theme="orbit"] .middle > .statCard:first-child {grid-column:1;grid-row:1;}
+html[data-theme="orbit"] .middle > .statCard:last-child {grid-column:2;grid-row:1;}
+html[data-theme="orbit"] .btnCol {grid-column:1/3;grid-row:2;gap:10px;margin-top:6px;}
+html[data-theme="orbit"] .statCard {padding:10px 8px;display:flex;flex-direction:column;justify-content:center;}
+html[data-theme="orbit"] .statCard h3 {font-size:11px;letter-spacing:.08em;text-transform:uppercase;}
+html[data-theme="orbit"] .statCard .big {font-size:32px;color:#f8b94f;}
+html[data-theme="orbit"] .statCard .controls {flex-wrap:wrap;justify-content:center;gap:6px;}
+html[data-theme="orbit"] .chip {font-size:12px;padding:4px 8px;}
+html[data-theme="orbit"] .btnRow {gap:6px;display:grid;grid-template-columns:1fr 1fr 1fr;width:100%;}
+html[data-theme="orbit"] :is(.undoBtn,.redoBtn,.resetBtn,.logBtn,.resultsBtn) {min-height:44px;padding:8px 6px;font-size:12px;}
+html[data-theme="orbit"] .foulRow {gap:8px;}
+html[data-theme="orbit"] .freeBallBtn {min-height:44px;font-size:12px;padding:8px 10px;}
+html[data-theme="orbit"] .pending {grid-area:pending;padding:4px 0;gap:6px;font-size:12px;}
+html[data-theme="orbit"] .pending .amount {font-size:20px;}
+html[data-theme="orbit"] .headToHead {grid-area:stats;margin:0;padding:0 10px;min-width:0;}
+html[data-theme="orbit"] .headToHead[open] {padding-bottom:8px;}
+html[data-theme="orbit"] .h2hTitle {font-size:10px;letter-spacing:.08em;}
+html[data-theme="orbit"] .h2hSummary {font-size:11px;}
+html[data-theme="orbit"] .h2hGames {gap:4px;margin-top:0;}
+html[data-theme="orbit"] .h2hGame {padding:6px 2px;}
+html[data-theme="orbit"] .h2hGame strong {font-size:16px;}
+html[data-theme="orbit"] .h2hGame span {font-size:10px;margin-top:2px;}
+html[data-theme="orbit"] .bottom {grid-area:rack;display:flex;align-items:center;margin:0;padding:42px 10px 10px;border:1px solid #60426f;border-radius:8px;background:linear-gradient(160deg,#35223e,#171426);min-height:0;}
+html[data-theme="orbit"] .ballRow {display:grid;grid-template-columns:1fr 1fr;gap:14px 8px;width:100%;}
+html[data-theme="orbit"] .ball {width:min(100%,14dvh);height:auto;aspect-ratio:1;font-size:20px;}
+html[data-theme="orbit"] #app .submit {grid-column:2;grid-row:4;align-self:center;padding:10px 4px;min-height:44px;font-size:13px;background:#f8b94f;color:#24172b;border:1px solid #ffe0a0;}
+html[data-theme="orbit"] .appearance {position:absolute;right:18px;top:14px;margin:0;}
+@media(max-height:600px){html[data-theme="orbit"] .middle{gap:6px;}html[data-theme="orbit"] .btnCol{gap:6px;}html[data-theme="orbit"] .ballRow{gap:8px;}html[data-theme="orbit"] .player{padding:12px;}}
+
 </style>
 </head>
 <body>
-<details class="appearance"><summary>Appearance</summary><label for="visualTheme">Theme <select id="visualTheme"><option value="classic">CLASSIC</option><option value="broadcast">BROADCAST</option><option value="oled">OLED</option><option value="club">CLUB</option><option value="copper">COPPER</option></select></label></details>
+<details class="appearance"><summary>Appearance</summary><label for="visualTheme">Theme <select id="visualTheme"><option value="classic">CLASSIC</option><option value="broadcast">BROADCAST</option><option value="oled">OLED</option><option value="club">CLUB</option><option value="copper">COPPER</option><option value="orbit">ORBIT</option></select></label></details>
 <div class="app">
   <header>
     <div class="row">
