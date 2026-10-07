@@ -81,6 +81,6 @@ html[data-theme="broadcast"] :is(.undoBtn,.redoBtn,.resetBtn,.logBtn,.resultsBtn
 html[data-theme="broadcast"] .statCard .chip{font-size:12px;padding:4px 6px;}
 html[data-theme="broadcast"] .h2hGame{padding:4px;}
 html[data-theme="broadcast"] .h2hGame span{margin-top:2px;font-size:11px;}
-html[data-theme="broadcast"] .bottom{padding:8px;}
-html[data-theme="broadcast"] .ball{width:min(100%,64px);}
+html[data-theme="broadcast"] .bottom{padding:4px;}
+html[data-theme="broadcast"] .ball{width:min(100%,56px);}
 }
