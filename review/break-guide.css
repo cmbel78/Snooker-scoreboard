@@ -1,0 +1,12 @@
+.breakGuide {position:absolute;left:14px;right:14px;bottom:6px;display:flex;gap:3px;align-items:center;overflow-x:auto;white-space:nowrap;height:18px;max-width:calc(100% - 28px);scrollbar-width:thin;}
+.breakGuide[hidden] {display:none;}
+.breakGuide.unavailable {font-size:10px;color:var(--muted);}
+.breakBall {display:block;flex:0 0 13px;width:13px;height:13px;border-radius:50%;border:1px solid #777;background-image:radial-gradient(circle at 30% 25%,#ffffffa0,transparent 45%),radial-gradient(circle at 70% 80%,#0008,transparent 65%);}
+.breakBall.breakFree {outline:1px dashed var(--outline);outline-offset:1px;}
+#app .player:has(.breakGuide:not([hidden])) {padding-bottom:28px;}
+html[data-theme="orbit"] #app .player .breakGuide {bottom:10px;}
+@media(min-width:601px) and (max-height:600px){
+html:is([data-theme="broadcast"],[data-theme="oled"],[data-theme="club"],[data-theme="copper"]) #app .player:has(.breakGuide:not([hidden])) {padding-top:4px;padding-bottom:18px;}
+html:is([data-theme="broadcast"],[data-theme="oled"],[data-theme="club"],[data-theme="copper"]) #app .player:has(.breakGuide:not([hidden])) .score {font-size:32px;}
+html:is([data-theme="broadcast"],[data-theme="oled"],[data-theme="club"],[data-theme="copper"]) #app .breakGuide {bottom:2px;}
+}
